@@ -312,6 +312,8 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
 
     func setUserCursor(_ offset: Int) {
         let o = min(max(0, offset), storage.length)
+        // While the user is in the chat, their caret is the ghost: move that, or returning to the page would undo it.
+        if textView.ghostRange != nil { textView.ghostRange = NSRange(location: o, length: 0) }
         textView.setSelectedRange(NSRange(location: o, length: 0))
         textView.scrollRangeToVisible(NSRange(location: o, length: 0))
     }
