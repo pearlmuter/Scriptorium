@@ -5,7 +5,7 @@ import TranscriptazeCore
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @State private var columns: NavigationSplitViewVisibility = .all
-    @AppStorage("chatWidth") private var chatWidth: Double = 320
+    @AppStorage("chatPanelWidth") private var chatWidth: Double = 420
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -53,7 +53,7 @@ struct ChatDivider: View {
                 .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
                     .onChanged { g in
                         if start == nil { start = width }
-                        width = min(520, max(240, (start ?? width) + g.translation.width))
+                        width = min(640, max(300, (start ?? width) + g.translation.width))
                     }
                     .onEnded { _ in start = nil }))
     }

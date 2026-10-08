@@ -39,7 +39,7 @@ struct ChatPanel: View {
                         .disabled(chat.messages.isEmpty)
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color(Palette.secondaryInk))
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -112,7 +112,7 @@ struct ChatPanel: View {
             if text.hasSuffix("thinking") { ThinkingDots() }
             Text(text)
         }
-        .font(.system(size: 10.5, design: .serif))
+        .font(.system(size: 12.5, design: .serif))
         .foregroundStyle(Color(Palette.secondaryInk).opacity(0.8))
         .frame(maxWidth: .infinity, alignment: .trailing)
         .padding(.top, 4)
@@ -121,15 +121,15 @@ struct ChatPanel: View {
     private var introduction: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Talk to the guardian about the text.")
-                .font(.system(size: 14, weight: .medium, design: .serif))
+                .font(.system(size: 16.5, weight: .medium, design: .serif))
                 .foregroundStyle(Color(Palette.ink))
             Text("There is no send button: speak or type below and the guardian reads along, answering when you have finished a thought. Your caret stays on the page as a ghost, so “this sentence” means what you were pointing at.")
-                .font(.system(size: 12, design: .serif))
+                .font(.system(size: 14, design: .serif))
                 .foregroundStyle(Color(Palette.secondaryInk))
                 .fixedSize(horizontal: false, vertical: true)
             if guardian.status == .absent {
                 Text("No guardian is connected. Give the connection to Claude Code, Claude Desktop or any MCP client.")
-                    .font(.system(size: 12, design: .serif))
+                    .font(.system(size: 14, design: .serif))
                     .foregroundStyle(Color(Palette.secondaryInk))
                     .fixedSize(horizontal: false, vertical: true)
                 CopyConnectionButton()
@@ -152,7 +152,7 @@ struct ChatPanel: View {
             HStack(alignment: .bottom, spacing: 4) {
                 TextField(dictation.state == .listening && model.chatFocused ? "Listening…" : "Talk to the guardian…", text: $chat.live, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 13.5, design: .serif))
+                    .font(.system(size: 16, design: .serif))
                     .foregroundStyle(Color(Palette.ink))
                     .lineLimit(1...12)
                     .focused($fieldFocused)
@@ -181,7 +181,7 @@ struct ChatPanel: View {
                     if note.hasSuffix("thinking") { ThinkingDots() }
                     Text(note)
                 }
-                .font(.system(size: 10.5, design: .serif))
+                .font(.system(size: 12.5, design: .serif))
                 .foregroundStyle(Color(Palette.secondaryInk).opacity(0.8))
             }
         }
@@ -204,7 +204,7 @@ struct ChatPanel: View {
             model.toggleDictation()
         } label: {
             Group {
-                if listeningHere { LevelDots(level: dictation.level) } else { Image(systemName: "mic").font(.system(size: 12.5, weight: .medium)) }
+                if listeningHere { LevelDots(level: dictation.level) } else { Image(systemName: "mic").font(.system(size: 14.5, weight: .medium)) }
             }
             .foregroundStyle(listeningHere ? Color(Palette.rubric) : Color(Palette.secondaryInk))
             .frame(width: 26, height: 24)
@@ -240,23 +240,23 @@ struct MessageRow: View {
         VStack(alignment: .trailing, spacing: 4) {
             if message.spoken == true {
                 HStack(spacing: 3) {
-                    Image(systemName: "mic").font(.system(size: 8.5))
+                    Image(systemName: "mic").font(.system(size: 10))
                     Text("said on the page")
                 }
-                .font(.system(size: 10.5, design: .serif))
+                .font(.system(size: 12.5, design: .serif))
                 .foregroundStyle(Color(Palette.secondaryInk))
             }
             if let anchor = message.anchor {
                 HStack(spacing: 4) {
-                    GhostGlyph().frame(width: 7, height: 12)
+                    GhostGlyph().frame(width: 8, height: 14)
                     Text(anchor).foregroundStyle(Color(Palette.rubric).opacity(0.85))
                     if let quote = message.quote { Text("“\(quote)”").italic().lineLimit(1).truncationMode(.middle) }
                 }
-                .font(.system(size: 10.5, design: .serif))
+                .font(.system(size: 12.5, design: .serif))
                 .foregroundStyle(Color(Palette.secondaryInk))
             }
             Text(message.text)
-                .font(.system(size: 13.5, design: .serif))
+                .font(.system(size: 16, design: .serif))
                 .foregroundStyle(Color(Palette.ink))
                 .textSelection(.enabled)
                 .padding(.horizontal, 11)
@@ -274,14 +274,14 @@ struct MessageRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 if previous?.role != .guardian {
                     HStack(spacing: 4) {
-                        Diamond().fill(Color(Palette.lapis)).frame(width: 5, height: 7)
+                        Diamond().fill(Color(Palette.lapis)).frame(width: 6, height: 8)
                         Text("Guardian")
                     }
-                    .font(.system(size: 10.5, weight: .medium, design: .serif))
+                    .font(.system(size: 12.5, weight: .medium, design: .serif))
                     .foregroundStyle(Color(Palette.lapis))
                 }
                 Text(message.text)
-                    .font(.system(size: 13.5, design: .serif))
+                    .font(.system(size: 16, design: .serif))
                     .foregroundStyle(Color(Palette.ink))
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
@@ -295,13 +295,13 @@ struct MessageRow: View {
     private var activity: some View {
         HStack(alignment: .center, spacing: 6) {
             if let ink = message.ink {
-                RoundedRectangle(cornerRadius: 2).fill(Color(Palette.swatch(ink))).frame(width: 9, height: 9)
+                RoundedRectangle(cornerRadius: 2).fill(Color(Palette.swatch(ink))).frame(width: 11, height: 11)
             } else {
-                Image(systemName: "pencil.tip").font(.system(size: 9))
+                Image(systemName: "pencil.tip").font(.system(size: 11))
             }
             Text(message.text).lineLimit(1).truncationMode(.middle)
         }
-        .font(.system(size: 11, design: .serif))
+        .font(.system(size: 13, design: .serif))
         .foregroundStyle(Color(Palette.lapis).opacity(0.7))
         .padding(.leading, 11)
         .padding(.top, gap)
@@ -316,13 +316,13 @@ struct GhostChip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            GhostGlyph().frame(width: 7, height: 13)
+            GhostGlyph().frame(width: 8, height: 15)
             Text(anchor).foregroundStyle(Color(Palette.rubric).opacity(0.9))
             Text("“\(quote)”").italic().lineLimit(1).truncationMode(.head)
                 .foregroundStyle(Color(Palette.secondaryInk))
             Spacer(minLength: 4)
             Button(action: drop) {
-                Image(systemName: "xmark").font(.system(size: 8.5, weight: .semibold))
+                Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Color(Palette.secondaryInk))
                     .frame(width: 16, height: 16)
                     .contentShape(Rectangle())
@@ -330,7 +330,7 @@ struct GhostChip: View {
             .buttonStyle(.plain)
             .help("Don’t point at anything")
         }
-        .font(.system(size: 11, design: .serif))
+        .font(.system(size: 13, design: .serif))
         .padding(.leading, 8)
         .padding(.trailing, 3)
         .padding(.vertical, 3)
