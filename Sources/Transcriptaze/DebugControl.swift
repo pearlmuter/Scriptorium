@@ -45,6 +45,21 @@ enum DebugControl {
             if let text = query["text"] { model.chatDraft = text }
             if query["send"] == "1" { model.sendChat() }
             return "ok"
+        case "/debug/keypress":
+            // A real key event through the window, as if typed: name=return|optreturn, or text=… to type.
+            guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 200 }) else { return "no window" }
+            func press(_ chars: String, code: UInt16, flags: NSEvent.ModifierFlags = []) {
+                for type in [NSEvent.EventType.keyDown, .keyUp] {
+                    if let e = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, characters: chars, charactersIgnoringModifiers: chars, isARepeat: false, keyCode: code) { window.sendEvent(e) }
+                }
+            }
+            if let text = query["text"] { for ch in text { press(String(ch), code: 0) } }
+            switch query["name"] {
+            case "return": press("\r", code: 36)
+            case "optreturn": press("\r", code: 36, flags: .option)
+            default: break
+            }
+            return "ok \(String(describing: type(of: window.firstResponder as Any)))"
         case "/debug/chatshow":
             model.showChat = query["show"] != "0"; return "ok"
         case "/debug/page":
