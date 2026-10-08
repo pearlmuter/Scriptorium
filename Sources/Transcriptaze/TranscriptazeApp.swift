@@ -60,6 +60,9 @@ struct TranscriptazeApp: App {
                 Button("Copy MCP Connection for LLM") { model.copyConnectionCard() }
                     .keyboardShortcut("c", modifiers: [.command, .option, .shift])
             }
+            CommandGroup(replacing: .help) {
+                ManualMenuItem()
+            }
             CommandGroup(after: .sidebar) {
                 Button(model.showChat ? "Hide Chat" : "Show Chat") { withAnimation(.easeInOut(duration: 0.25)) { model.showChat.toggle() } }
                     .keyboardShortcut("c", modifiers: [.command, .control])
@@ -69,6 +72,11 @@ struct TranscriptazeApp: App {
                     .keyboardShortcut("l", modifiers: [.command, .shift])
             }
         }
+
+        Window("Transcriptaze Manual", id: "manual") {
+            ManualWindow()
+        }
+        .defaultSize(width: 620, height: 860)
 
         Settings {
             SettingsView().environmentObject(model)

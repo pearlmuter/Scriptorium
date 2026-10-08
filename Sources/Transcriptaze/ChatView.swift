@@ -218,6 +218,14 @@ struct MessageRow: View {
 
     private var user: some View {
         VStack(alignment: .trailing, spacing: 4) {
+            if message.spoken == true {
+                HStack(spacing: 3) {
+                    Image(systemName: "mic").font(.system(size: 8.5))
+                    Text("said on the page")
+                }
+                .font(.system(size: 10.5, design: .serif))
+                .foregroundStyle(Color(Palette.secondaryInk))
+            }
             if let anchor = message.anchor {
                 HStack(spacing: 4) {
                     GhostGlyph().frame(width: 7, height: 12)

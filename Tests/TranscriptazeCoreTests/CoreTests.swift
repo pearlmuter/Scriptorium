@@ -200,3 +200,14 @@ final class DictationTests: XCTestCase {
         XCTAssertEqual(c, 6)
     }
 }
+
+final class ChatVoiceTests: XCTestCase {
+    func testSpokenSend() {
+        XCTAssertEqual(ChatVoice.strippingSend("Is this date right? Send it."), "Is this date right?")
+        XCTAssertEqual(ChatVoice.strippingSend("Fix the pinks, send message"), "Fix the pinks")
+        XCTAssertEqual(ChatVoice.strippingSend("What about the second paragraph? Send."), "What about the second paragraph?")
+        XCTAssertNil(ChatVoice.strippingSend("I will write and then send"), "a bare 'send' must be its own sentence")
+        XCTAssertNil(ChatVoice.strippingSend("Ascend it"))
+        XCTAssertNil(ChatVoice.strippingSend("Nothing to see"))
+    }
+}

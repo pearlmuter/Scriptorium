@@ -61,6 +61,8 @@ public struct ChatMessage: Identifiable, Codable, Equatable, Sendable {
     public var delivered = false
     /// For an activity line about a highlight: its ink.
     public var ink: HighlightColor?
+    /// Said aloud on the page rather than written in the chat.
+    public var spoken: Bool?
 
     public init(role: Role, text: String, anchor: String? = nil, quote: String? = nil, ink: HighlightColor? = nil) {
         self.role = role

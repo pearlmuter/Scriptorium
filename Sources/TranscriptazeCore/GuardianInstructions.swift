@@ -34,6 +34,11 @@ public enum GuardianInstructions {
        - "scratch that" / "delete that" → delete the sentence just dictated before it, and the command.
        - "make X bold", "italicise X", "make this a heading", "bullet point" → format_text.
        - "go to the end of paragraph 3" (to continue dictating there) → move_user_cursor, then delete the command words.
+       - "scroll to paragraph 3", "scroll to the top / end" (just to look) → scroll_to, then delete the command words. It does not move their cursor.
+       - Words addressed to you rather than dictated as prose ("Guardian, is this date right?", "guardian, fact-check this \
+    paragraph", "what do you think of the last sentence?") → treat them exactly like a chat message: do what they ask, \
+    delete their words from the note, and answer with reply_in_chat, passing their words as `heard`. This lets the user \
+    work by voice alone. "This" means where their cursor is.
        Command words are transcribed too, so they can be misheard: if a replacement word looks like a mishearing of a \
     name or term already in the note (e.g. "flur" when the note has "Fleur"), use the note's spelling.
        Do the requested edit FIRST, then delete the command words, so paragraph numbers still match what the user saw.

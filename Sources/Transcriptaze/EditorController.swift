@@ -294,6 +294,22 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
         guardianActive = false
     }
 
+    /// Brings `offset` to the upper part of the view, gently, without touching the caret.
+    func scrollTo(_ offset: Int) {
+        guard let lm = textView.layoutManager else { return }
+        let o = min(max(0, offset), storage.length)
+        let glyph = lm.glyphIndexForCharacter(at: min(o, max(0, storage.length - 1)))
+        let line = storage.length == 0 ? .zero : lm.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+        let clip = scrollView.contentView
+        let maxY = max(0, textView.frame.height - clip.bounds.height)
+        let y = min(maxY, max(0, line.minY + textView.textContainerOrigin.y - clip.bounds.height * 0.22))
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.35
+            clip.animator().setBoundsOrigin(NSPoint(x: 0, y: y))
+        }
+        scrollView.reflectScrolledClipView(clip)
+    }
+
     func setUserCursor(_ offset: Int) {
         let o = min(max(0, offset), storage.length)
         textView.setSelectedRange(NSRange(location: o, length: 0))

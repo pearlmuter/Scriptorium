@@ -33,6 +33,8 @@ final class FakeHost: DocumentHost, NoteLibrary {
         edits.append(summary)
     }
     func setUserCursor(_ offset: Int) { userCursor = offset }
+    var scrolledTo: Int?
+    func scrollTo(_ offset: Int) { scrolledTo = offset }
     func setGuardianFocus(_ range: NSRange?, label: String?) { focus = range }
     func markReviewed(through batch: Int) { fresh.removeAll { $0.batch <= batch } }
     func addHighlight(_ range: NSRange, color: HighlightColor, note: String?, author: Author) {
@@ -169,6 +171,22 @@ final class MCPTests: XCTestCase {
         XCTAssertEqual(chat.messages.last?.role, .guardian)
         let history = try await box.call("read_chat", arguments: [:])
         XCTAssertTrue(history.contains("You: No: it ended in 1945."), history)
+    }
+
+    func testVoiceOnly_SpokenQuestionAndScroll() async throws {
+        let text = "One.\nTwo.\nThree is here. Guardian, is this right?"
+        let host = FakeHost(text: text)
+        let chat = ChatLog()
+        let box = GuardianToolbox(host: host, library: host, chat: chat)
+        _ = try await box.call("scroll_to", arguments: ["paragraph": 2])
+        XCTAssertEqual(host.scrolledTo, 5)
+        XCTAssertEqual(host.userCursor, (text as NSString).length, "scrolling leaves the cursor alone")
+        _ = try await box.call("delete_text", arguments: ["paragraph": 3, "find": "Guardian, is this right?"])
+        _ = try await box.call("reply_in_chat", arguments: ["text": "Yes.", "heard": "Is this right?"])
+        XCTAssertEqual(chat.messages.map(\.role), [.user, .guardian])
+        XCTAssertEqual(chat.messages.first?.spoken, true)
+        XCTAssertTrue(chat.undelivered.isEmpty, "a spoken question was already heard")
+        XCTAssertEqual(host.text, "One.\nTwo.\nThree is here.")
     }
 
     func testGhostCaretQuotesTheWordsAroundIt() {

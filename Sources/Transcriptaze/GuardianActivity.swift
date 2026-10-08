@@ -57,7 +57,7 @@ final class GuardianActivity: ObservableObject {
                 if text.contains("•") || text.contains("CHAT —") { setStatus(.working) } else if status == .absent { setStatus(.connected) }
             case "finish_review":
                 setStatus(.connected)
-            case "list_notes", "read_note", "focus", "read_chat", "reply_in_chat":
+            case "list_notes", "read_note", "focus", "read_chat", "reply_in_chat", "scroll_to":
                 if status == .absent { setStatus(.connected) }
             default:
                 setStatus(.working)
@@ -97,7 +97,7 @@ final class GuardianActivity: ObservableObject {
 
     /// Tools that change the note (or its highlights).
     static func isEdit(_ name: String) -> Bool {
-        !["wait_for_dictation", "read_document", "finish_review", "list_notes", "read_note", "focus", "read_chat", "reply_in_chat"].contains(name)
+        !["wait_for_dictation", "read_document", "finish_review", "list_notes", "read_note", "focus", "read_chat", "reply_in_chat", "scroll_to"].contains(name)
     }
 
     static func describe(_ name: String, _ a: [String: Any]) -> String {

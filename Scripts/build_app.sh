@@ -17,6 +17,8 @@ cp "$BIN/Transcriptaze" "$APP/Contents/MacOS/Transcriptaze"
 cp "$BIN/transcriptaze-mcp" "$APP/Contents/MacOS/transcriptaze-mcp"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 [ -f "$ROOT/Resources/AppIcon.icns" ] && cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/"
+# The manual, typeset by Scripts/make_manual.swift from Resources/Manual/manual.html.
+[ -f "$ROOT/Resources/Manual.pdf" ] && cp "$ROOT/Resources/Manual.pdf" "$APP/Contents/Resources/"
 
 # Ad-hoc signature with a stable identifier, so the microphone permission sticks between builds.
 codesign --force --sign - --identifier com.transcriptaze.app --entitlements "$ROOT/Resources/Transcriptaze.entitlements" "$APP/Contents/MacOS/transcriptaze-mcp"

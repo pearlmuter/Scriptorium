@@ -15,6 +15,8 @@ public protocol DocumentHost: AnyObject {
     /// Applies a guardian edit, keeping the user's caret where it belongs.
     func applyGuardianEdit(_ edit: TextEdit, summary: String)
     func setUserCursor(_ offset: Int)
+    /// Scrolls the page to show `offset`, leaving the user's caret where it is.
+    func scrollTo(_ offset: Int)
     /// Shows where the guardian is looking; nil hides its cursor.
     func setGuardianFocus(_ range: NSRange?, label: String?)
     /// Marks dictation up to and including `batch` as reviewed.
@@ -121,8 +123,11 @@ public final class GuardianToolbox {
                  description: "Remove highlights: those overlapping a quote, those in a paragraph, or (with no paragraph) all of them.",
                  inputSchema: schema(["paragraph": p, "sentence": s, "find": str("Optional: only highlights overlapping this exact text."), "occurrence": occ])),
         ToolSpec(name: "reply_in_chat",
-                 description: "Answer the user in the chat panel beside the note. Use when they wrote to you in the chat (shown under CHAT in read_document / wait_for_dictation). Keep it short; the user is writing. You can also make the edits they ask for there.",
-                 inputSchema: schema(["text": str("Your message. Plain text; refer to places as ¶n or ¶n [s].")], required: ["text"])),
+                 description: "Answer the user in the chat panel beside the note. Use when they wrote to you in the chat (shown under CHAT in read_document / wait_for_dictation), or spoke to you while dictating on the page (then pass their words as `heard`, and delete them from the note). Keep it short; the user is writing.",
+                 inputSchema: schema(["text": str("Your message. Plain text; refer to places as ¶n or ¶n [s]."), "heard": str("If the user spoke to you on the page instead of writing in the chat: their words, cleaned up. They are shown in the chat as the user's message, before your reply.")], required: ["text"])),
+        ToolSpec(name: "scroll_to",
+                 description: "Scroll the page to show a paragraph, without moving the user's cursor. For spoken 'scroll to paragraph 3', 'show me the top', 'scroll to the end'.",
+                 inputSchema: schema(["paragraph": ["type": "integer", "description": "Paragraph number (¶). 0 = top of the note, -1 = the end."], "sentence": s], required: ["paragraph"])),
         ToolSpec(name: "read_chat",
                  description: "Read the conversation with the user about this note, oldest first.",
                  inputSchema: schema(["limit": ["type": "integer", "description": "How many recent messages (default 20)."]])),
@@ -208,6 +213,15 @@ public final class GuardianToolbox {
             let offset = try TextOperations.offset(paragraph: pn, sentence: optInt("sentence"), atEnd: optString("position") != "start", in: text)
             host.setUserCursor(offset)
             return "The user's cursor is now at the \(optString("position") ?? "end") of ¶\(pn)\(optInt("sentence").map { " sentence \($0)" } ?? "")."
+        case "scroll_to":
+            let pn = try int("paragraph")
+            if pn <= 0 {
+                host.scrollTo(pn == 0 ? 0 : (text as NSString).length)
+                return pn == 0 ? "Scrolled to the top." : "Scrolled to the end."
+            }
+            let offset = try TextOperations.offset(paragraph: pn, sentence: optInt("sentence"), atEnd: false, in: text)
+            host.scrollTo(offset)
+            return "Scrolled to ¶\(pn); the user's cursor has not moved."
         case "focus":
             let pn = try int("paragraph")
             let (block, range) = try TextOperations.scope(paragraph: pn, sentence: optInt("sentence"), in: Outline(text: text))
@@ -377,6 +391,12 @@ public final class GuardianToolbox {
     private func replyInChat(_ args: [String: Any]) throws -> String {
         guard let text = (args["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { throw OperationError("Missing 'text'.") }
         guard let chat else { throw OperationError("The chat is not available.") }
+        if let heard = (args["heard"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty {
+            var said = ChatMessage(role: .user, text: heard)
+            said.spoken = true
+            said.delivered = true
+            chat.post(said)
+        }
         chat.post(ChatMessage(role: .guardian, text: text))
         return "Sent."
     }

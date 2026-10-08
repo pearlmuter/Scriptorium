@@ -88,12 +88,14 @@ final class AppModel: ObservableObject, NoteLibrary {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard let self, !Task.isCancelled else { return }
                 self.deliverDictation(self.reflex.flush())
+                self.sendIfSpokenSend()
             }
         }
         dictation.onStop = { [weak self] in
             guard let self else { return }
             self.pauseTask?.cancel()
             self.deliverDictation(self.reflex.flush())
+            self.sendIfSpokenSend()
             self.editor.isDictating = false
         }
     }
@@ -239,6 +241,13 @@ final class AppModel: ObservableObject, NoteLibrary {
         let pointer = ghostPointer
         chat.post(ChatMessage(role: .user, text: text, anchor: pointer?.anchor, quote: pointer?.quote))
         chatDraft = ""
+    }
+
+    /// "Send it" at the end of a dictated chat message, followed by a pause, sends it.
+    private func sendIfSpokenSend() {
+        guard chatFocused, let stripped = ChatVoice.strippingSend(chatDraft) else { return }
+        chatDraft = stripped
+        sendChat()
     }
 
     /// Dictation goes where the user is writing: the page, or the chat.

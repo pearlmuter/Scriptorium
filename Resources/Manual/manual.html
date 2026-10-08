@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Transcriptaze — The Manual</title>
+<style>
+  :root {
+    --paper: #FAF7F0;
+    --paper-deep: #F2EEE5;
+    --ink: #22201C;
+    --ink-2: #6E685E;
+    --ink-3: #B4AC9E;
+    --rubric: #B4462C;
+    --lapis: #2E4F9E;
+    --wash: #E9DFC9;
+    --yellow: rgba(244, 207, 58, .45);
+    --green: rgba(124, 201, 122, .42);
+    --pink: rgba(242, 139, 181, .42);
+    --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+    --sans: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); }
+  body {
+    font-family: var(--serif);
+    color: var(--ink);
+    font-size: 9.4px;
+    line-height: 1.46;
+    font-variant-numeric: oldstyle-nums proportional-nums;
+    -webkit-font-smoothing: antialiased;
+    font-kerning: normal;
+    hyphens: auto;
+  }
+
+  /* ---------- Pages ---------- */
+  .page {
+    width: 420px; height: 595px;
+    position: relative; overflow: hidden;
+    background: var(--paper);
+    padding: 52px 46px 54px 50px;
+  }
+  .page.even { padding: 52px 50px 54px 46px; }
+  .runhead {
+    position: absolute; top: 24px; left: 50px; right: 46px;
+    display: flex; justify-content: space-between;
+    font-size: 7.4px; letter-spacing: .14em; text-transform: lowercase;
+    font-variant-caps: all-small-caps; color: var(--ink-2);
+  }
+  .even .runhead { left: 46px; right: 50px; }
+  .runhead .mark { color: var(--rubric); }
+  .folio {
+    position: absolute; bottom: 24px; left: 0; right: 0;
+    text-align: center; font-size: 8.2px; color: var(--ink-2);
+  }
+  .folio::before, .folio::after { content: "·"; color: var(--ink-3); margin: 0 6px; }
+
+  /* ---------- Type ---------- */
+  p { text-align: justify; margin-bottom: 0; }
+  p + p { text-indent: 1.35em; }
+  p.flush, h2 + p, h3 + p, .lede + p, figure + p, .aside + p, ul + p, ol + p, table + p, .vignette + p, .pair + p { text-indent: 0; }
+  h1 { font-weight: 600; }
+  h2 {
+    font-size: 11.5px; font-weight: 600; margin: 12px 0 4px;
+    letter-spacing: .005em;
+  }
+  h2 .num { color: var(--rubric); font-weight: 500; font-size: 8px; vertical-align: 2.2px; margin-right: 4px; }
+  h3 {
+    font-size: 7.6px; font-weight: 600; margin: 11px 0 3px;
+    letter-spacing: .12em; font-variant-caps: all-small-caps; text-transform: lowercase; color: var(--ink-2);
+  }
+  em { font-style: italic; }
+  strong { font-weight: 600; }
+  .rubric { color: var(--rubric); }
+  .lapis { color: var(--lapis); }
+  .quiet { color: var(--ink-2); }
+  code {
+    font-family: var(--mono); font-size: 7.4px;
+    background: rgba(34, 32, 28, .05); padding: .5px 3px; border-radius: 2.5px;
+    font-variant-numeric: normal; hyphens: none;
+  }
+  kbd {
+    font-family: var(--sans); font-size: 7.2px; font-weight: 500;
+    display: inline-block; min-width: 12px; text-align: center;
+    padding: 0 3.5px; line-height: 11px; border-radius: 3px;
+    border: .6px solid var(--ink-3); border-bottom-width: 1.1px;
+    background: #FFFDF8; color: var(--ink); letter-spacing: .04em;
+    font-variant-numeric: normal; vertical-align: .5px;
+  }
+  ul, ol { margin: 5px 0 4px 0; padding-left: 13px; }
+  li { margin: 2px 0; text-align: justify; }
+  ul li::marker { color: var(--rubric); content: "–  "; }
+  ol li::marker { color: var(--rubric); font-size: 8px; }
+
+  /* Chapter openers */
+  .opener { padding-top: 34px; }
+  .opener .chapter {
+    font-size: 8px; letter-spacing: .26em; color: var(--rubric);
+    text-transform: lowercase; font-variant-caps: all-small-caps;
+  }
+  .opener h1 {
+    font-size: 27px; line-height: 1.08; margin: 6px 0 10px; letter-spacing: -.01em;
+  }
+  .lede {
+    font-size: 11px; line-height: 1.42; font-style: italic; color: var(--ink-2);
+    margin-bottom: 14px; text-align: left; hyphens: manual;
+  }
+  .opener .rule { width: 34px; height: 1.2px; background: var(--rubric); margin: 0 0 14px; }
+
+  /* Figures */
+  figure { margin: 10px 0 8px; }
+  figure .frame {
+    border-radius: 5px; overflow: hidden;
+    border: .6px solid rgba(34, 32, 28, .16);
+    box-shadow: 0 1.5px 5px rgba(34, 32, 28, .07);
+    background: var(--paper);
+  }
+  figure img { display: block; width: 100%; }
+  figcaption {
+    font-size: 7.6px; line-height: 1.4; font-style: italic; color: var(--ink-2);
+    margin-top: 5px; text-align: left; hyphens: manual;
+  }
+  figcaption .fig { font-style: normal; color: var(--rubric); letter-spacing: .08em; font-variant-caps: all-small-caps; text-transform: lowercase; margin-right: 3px; }
+
+  /* Asides: the guardian's voice, set as it is in the chat */
+  .aside {
+    border-left: 1.6px solid rgba(46, 79, 158, .55);
+    padding: 1px 0 1px 9px; margin: 9px 0;
+  }
+  .aside .who { font-size: 7.4px; color: var(--lapis); font-weight: 600; margin-bottom: 1.5px; display: flex; align-items: center; gap: 4px; }
+  .aside p { text-align: left; hyphens: manual; }
+  .diamond { display: inline-block; width: 4.4px; height: 4.4px; background: var(--lapis); transform: rotate(45deg); }
+
+  .tip {
+    margin: 9px 0; padding: 7px 9px; border-radius: 5px;
+    background: var(--paper-deep); font-size: 8.6px; line-height: 1.45;
+  }
+  .tip .label { color: var(--rubric); letter-spacing: .14em; font-size: 7px; text-transform: lowercase; font-variant-caps: all-small-caps; margin-right: 4px; }
+
+  /* Highlighter ink */
+  .hl { border-radius: 2px; padding: 0 1.5px; margin: 0 -1.5px; -webkit-box-decoration-break: clone; }
+  .hl.y { background: var(--yellow); }
+  .hl.g { background: var(--green); }
+  .hl.p { background: var(--pink); }
+  .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: -.5px; margin-right: 3px; }
+  .swatch.y { background: #F0C832; } .swatch.g { background: #6CC06A; } .swatch.p { background: #EE7FAE; }
+
+  /* Vignettes: little set pieces of the page */
+  .vignette {
+    margin: 10px 0 9px; padding: 11px 14px 11px 26px; position: relative;
+    background: #FFFDF8; border-radius: 5px; border: .6px solid rgba(34, 32, 28, .12);
+    font-size: 10.4px; line-height: 1.55;
+  }
+  .vignette p { text-align: justify; }
+  .vignette .pn { position: absolute; left: 11px; font-size: 6.6px; color: var(--ink-3); letter-spacing: .06em; margin-top: 3.5px; }
+  .verse { color: var(--rubric); font-size: 5.6px; vertical-align: 4.6px; margin: 0 1.5px 0 2.5px; opacity: .9; }
+  .wet { color: rgba(34, 32, 28, .5); }
+  .caret { display: inline-block; width: 1.4px; height: 1.05em; background: var(--ink); vertical-align: -2px; margin: 0 .5px; }
+  .gcaret { display: inline-block; width: 1.6px; height: 1.05em; background: var(--lapis); vertical-align: -2px; position: relative; margin: 0 .5px; }
+  .gcaret::before { content: ""; position: absolute; left: -1.6px; top: -4.5px; width: 4.2px; height: 4.2px; background: var(--lapis); transform: rotate(45deg); }
+  .ghost { display: inline-block; width: 1.2px; height: .95em; background: rgba(34,32,28,.4); vertical-align: -2px; position: relative; margin: 0 .5px; }
+  .ghost::before { content: ""; position: absolute; left: -2.2px; top: -6px; width: 4px; height: 4px; border: .9px solid rgba(34,32,28,.5); border-radius: 50%; }
+  .gwash { background: rgba(46, 79, 158, .12); border-radius: 2px; }
+  .ghostsel { border-bottom: 1.1px dotted rgba(34,32,28,.55); background: rgba(34,32,28,.05); }
+  .vignette .label { position: absolute; right: 10px; top: 7px; font-family: var(--serif); font-size: 6.6px; letter-spacing: .14em; color: var(--ink-3); text-transform: lowercase; font-variant-caps: all-small-caps; }
+
+  /* Before/after pairs */
+  .pair { display: grid; grid-template-columns: 1fr 14px 1fr; align-items: center; margin: 9px 0; }
+  .pair .side { background: #FFFDF8; border: .6px solid rgba(34, 32, 28, .12); border-radius: 5px; padding: 7px 8px; font-size: 8.6px; line-height: 1.45; text-align: left; hyphens: manual; }
+  .pair .arrow { text-align: center; color: var(--rubric); font-size: 9px; }
+  .pair .side .tag { display: block; font-size: 6.4px; letter-spacing: .16em; color: var(--ink-3); text-transform: lowercase; font-variant-caps: all-small-caps; margin-bottom: 2px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 6px; font-size: 8.6px; }
+  td { padding: 2.6px 0; vertical-align: baseline; border-bottom: .5px solid rgba(180, 172, 158, .45); }
+  td.k { white-space: nowrap; text-align: right; padding-left: 8px; }
+  tr:last-child td { border-bottom: none; }
+  table.tools td:first-child { width: 112px; padding-right: 8px; }
+  table.tools code { font-size: 7px; }
+
+  .ragged p { text-align: left; }
+  .keys { white-space: nowrap; }
+  td { hyphens: manual; }
+  .cols { columns: 2; column-gap: 20px; }
+  .cols h3:first-child { margin-top: 0; }
+  .keep { break-inside: avoid; }
+
+  /* Overview callouts */
+  .callouts { position: relative; }
+  .dot {
+    position: absolute; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--rubric); color: #fff; font-family: var(--sans); font-weight: 600;
+    font-size: 7.4px; line-height: 13px; text-align: center; font-variant-numeric: lining-nums;
+    box-shadow: 0 0 0 1.6px var(--paper), 0 1px 3px rgba(0,0,0,.2);
+    transform: translate(-50%, -50%);
+  }
+  .legend { display: grid; grid-template-columns: 13px 1fr; gap: 4px 7px; margin-top: 9px; font-size: 8.6px; line-height: 1.4; align-items: baseline; }
+  .legend .n { width: 12px; height: 12px; border-radius: 50%; background: var(--rubric); color: #fff; font-family: var(--sans); font-weight: 600; font-size: 7px; line-height: 12px; text-align: center; font-variant-numeric: lining-nums; }
+
+  /* Cover */
+  .cover { padding: 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .cover .top { margin-top: 112px; display: flex; flex-direction: column; align-items: center; }
+  .cover p { text-align: center; }
+  .cover img.icon { width: 74px; height: 74px; filter: drop-shadow(0 4px 10px rgba(34,32,28,.16)); }
+  .cover h1 { font-size: 35px; letter-spacing: -.012em; margin-top: 22px; font-weight: 600; }
+  .cover .sub { font-size: 8.6px; letter-spacing: .34em; color: var(--rubric); margin-top: 8px; text-transform: lowercase; font-variant-caps: all-small-caps; }
+  .cover .tag { font-style: italic; color: var(--ink-2); font-size: 12px; line-height: 1.5; margin-top: 30px; }
+  .cover .rule { width: 1px; height: 46px; background: linear-gradient(var(--ink-3), transparent); margin-top: 30px; }
+  .cover .foot { position: absolute; bottom: 40px; left: 0; right: 0; font-size: 7.6px; color: var(--ink-2); letter-spacing: .12em; text-transform: lowercase; font-variant-caps: all-small-caps; }
+  .cover .verse-deco { font-size: 9px; vertical-align: 13px; color: var(--rubric); margin-left: 2px; font-weight: 500; }
+
+  /* Contents */
+  .toc { margin-top: 8px; }
+  .toc .row { display: flex; align-items: baseline; padding: 4.5px 0; border-bottom: .5px solid rgba(180, 172, 158, .45); font-size: 10.4px; }
+  .toc .row .ch { width: 24px; color: var(--rubric); font-size: 8px; letter-spacing: .1em; }
+  .toc .row .t { flex: 1; }
+  .toc .row .t em { color: var(--ink-2); font-size: 8.6px; margin-left: 5px; }
+  .toc .row .pg { color: var(--ink-2); font-size: 9px; }
+
+  .steps { counter-reset: step; margin-top: 6px; }
+  .step { display: grid; grid-template-columns: 18px 1fr; margin: 7px 0; }
+  .step .sn { color: var(--rubric); font-size: 15px; line-height: 1; font-weight: 500; }
+  .step p { text-align: left; hyphens: manual; }
+  .step b { font-weight: 600; }
+
+  .colophon { text-align: center; padding-top: 170px; }
+  .colophon p { text-align: center; font-size: 8.6px; color: var(--ink-2); line-height: 1.7; }
+  .colophon p + p { text-indent: 0; margin-top: 10px; }
+  .colophon .fleuron { color: var(--rubric); font-size: 13px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ================= 1. Cover ================= -->
+<section class="page cover">
+  <div class="top">
+    <img class="icon" src="img/icon.png" alt="">
+    <h1>Transcriptaze<span class="verse-deco">1</span></h1>
+    <div class="sub">the manual</div>
+    <p class="tag">You speak; the page listens.<br>A guardian reads along.</p>
+    <div class="rule"></div>
+  </div>
+  <div class="foot">for macOS · october 2026</div>
+</section>
+
+<!-- ================= 2. Contents & quick start ================= -->
+<section class="page even">
+  <div class="runhead"><span>contents</span><span>transcriptaze</span></div>
+  <h2 style="margin-top:4px;font-size:15px;">Contents</h2>
+  <div class="toc">
+    <div class="row"><span class="ch">i</span><span class="t">The Page<em>type, numbering, cursors</em></span><span class="pg">3</span></div>
+    <div class="row"><span class="ch">ii</span><span class="t">Voice<em>dictation and spoken commands</em></span><span class="pg">5</span></div>
+    <div class="row"><span class="ch">iii</span><span class="t">The Guardian<em>an LLM that reads along</em></span><span class="pg">7</span></div>
+    <div class="row"><span class="ch">iv</span><span class="t">The Chat<em>talking about the text</em></span><span class="pg">10</span></div>
+    <div class="row"><span class="ch">v</span><span class="t">Highlights<em>three inks, and fact-checking</em></span><span class="pg">12</span></div>
+    <div class="row"><span class="ch">vi</span><span class="t">Notes &amp; Settings<em>files, export, typesetting</em></span><span class="pg">14</span></div>
+    <div class="row"><span class="ch">·</span><span class="t">Keyboard Shortcuts</span><span class="pg">15</span></div>
+  </div>
+
+  <h2 style="margin-top:22px">In one minute</h2>
+  <div class="steps">
+    <div class="step"><span class="sn">1</span><p><b>Speak.</b> Press <span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>D</kbd></span> and talk. Words appear at your cursor. Say “new paragraph” to start one. Press the keys again to stop.</p></div>
+    <div class="step"><span class="sn">2</span><p><b>Bring a guardian.</b> Press <span class="keys"><kbd>⌥</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd></span> to copy the connection, and give it to Claude Code, Claude Desktop or any other MCP client. It fixes misheard words and carries out what you ask for out loud.</p></div>
+    <div class="step"><span class="sn">3</span><p><b>Talk it over.</b> Click into the chat beside the page, or press <span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>M</kbd>.</span> Your cursor stays behind as a ghost, so “is this right?” needs no explaining.</p></div>
+  </div>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 3. The Page ================= -->
+<section class="page">
+  <div class="runhead"><span>i · the page</span><span class="mark">¶</span></div>
+  <div class="opener">
+    <div class="chapter">chapter i</div>
+    <h1>The Page</h1>
+    <div class="rule"></div>
+    <p class="lede">A writing surface set like a printed book, so that what you dictate already looks like prose.</p>
+  </div>
+  <p>Notes are set in <em>book</em> style by default: justified and hyphenated, with a first-line indent instead of a gap between paragraphs, about sixty-five characters to the line, in New York with old-style figures. The alternative, <em>manuscript</em>, is ragged-right with space between paragraphs. Choose it in Settings.</p>
+
+  <h2>Chapter and verse</h2>
+  <p>Every paragraph is numbered in the margin. From the second sentence on, every sentence gets a small raised vermilion numeral, as verses do in a printed Bible. These numbers are how you and the guardian refer to places in the text: “paragraph two, sentence three.”</p>
+  <div class="vignette">
+    <span class="label">the page</span>
+    <span class="pn">2</span>
+    <p>The river was wide that spring.<span class="verse">2</span>We crossed it at dawn, before the mist had lifted from the water.<span class="verse">3</span>Nobody spoke.</p>
+  </div>
+  <p>The numbers are drawn on the page, not typed into it, so the file stays clean Markdown. Toggle them with <span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>L</kbd></span> or the <span class="rubric">¶</span> button in the format bar. The footer always shows where your cursor is, for example <span class="rubric">¶3 · 2</span>.</p>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 4. The Page II ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>i · the page</span></div>
+  <h2 style="margin-top:0">Three cursors</h2>
+  <p class="flush">Three hands can write on the page. Each has its own mark.</p>
+  <div class="vignette" style="padding-left:14px">
+    <p style="text-align:left">Yours, in ink<span class="caret"></span> · the guardian’s, in lapis, washing what it just <span class="gwash">changed</span><span class="gcaret"></span> · and your ghost<span class="ghost"></span>, left behind while you are in the chat.</p>
+  </div>
+  <p>The guardian’s cursor is a lapis bar with a small diamond on top. When it edits, the changed words are washed in lapis for a moment, so you can see what moved without looking for it.</p>
+
+  <h2>Wet ink</h2>
+  <p>Dictated words are set <span class="wet">a shade lighter</span> until the guardian has read them, like ink still drying. When it has looked them over they turn to full ink. If no guardian is connected, nothing is marked.</p>
+
+  <h2>Writing and formatting</h2>
+  <p>Notes are Markdown, and the markup stays in the text but recedes into a faint grey. Use the format bar at the top of the page, the Format menu, or the keyboard:</p>
+  <table>
+    <tr><td>Bold, italic, link</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>B</kbd> <kbd>⌘</kbd><kbd>I</kbd> <kbd>⌘</kbd><kbd>K</kbd></span></td></tr>
+    <tr><td>Headings 1–3, back to body text</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>1</kbd>–<kbd>3</kbd></span> &nbsp;<span class="keys"><kbd>⌘</kbd><kbd>0</kbd></span></td></tr>
+    <tr><td>Bulleted list, numbered list, quote</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd> <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd> <kbd>⇧</kbd><kbd>⌘</kbd><kbd>.</kbd></span></td></tr>
+    <tr><td>Code, strikethrough</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> <kbd>⇧</kbd><kbd>⌘</kbd><kbd>X</kbd></span></td></tr>
+  </table>
+  <p>Return continues a list; Return on an empty item ends it.</p>
+
+  <h2>Out of the way</h2>
+  <p>The format bar and footer fade while you write and return when you move the mouse. <strong>Focus mode</strong> (<span class="keys"><kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>)</span> hides all but the page.</p>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 5. Voice ================= -->
+<section class="page">
+  <div class="runhead"><span>ii · voice</span><span class="mark">¶</span></div>
+  <div class="opener">
+    <div class="chapter">chapter ii</div>
+    <h1>Voice</h1>
+    <div class="rule"></div>
+    <p class="lede">Speech recognition runs on your Mac; nothing you say leaves it.</p>
+  </div>
+  <p>Press <span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>D</kbd>,</span> or click <em>Dictate</em> in the footer, to start; press it again to stop. Words land at your cursor with the spacing and capitals a typist would use, and you can click elsewhere at any time and carry on there. The voice model loads when the app starts; until then the footer says <em>Loading voice model</em>.</p>
+
+  <h2>Dictation goes where you are writing</h2>
+  <p>If the chat field has focus, your words go into the chat instead of the page. Its microphone button starts dictation there. Then press Return to send.</p>
+
+  <h2>Two words the app catches at once</h2>
+  <p><em>“New paragraph”</em> and <em>“new line”</em> act the instant you say them. The words never reach the page and the cursor is already on the next line. A comma left before them becomes a full stop.</p>
+  <div class="tip"><span class="label">note</span>Every other command, such as “scratch that”, “make this a heading” or “change flow to fleur”, is carried out by the guardian. Without a guardian, those words stay on the page as text.</div>
+
+  <p style="margin-top:8px;text-indent:0"><em>Voice › Dictate from Audio File…</em> transcribes a recording the same way, in real time.</p>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 6. Voice II ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>ii · voice</span></div>
+  <h2 style="margin-top:0">Speaking to the guardian</h2>
+  <p class="flush">With a guardian connected, you can edit by voice without stopping. Say the command as part of your dictation. The guardian carries it out, then deletes the command words so they never stay in the note.</p>
+  <div class="pair">
+    <div class="side"><span class="tag">you say</span>“… and the light turned gold. Go to paragraph two, sentence two and change flow for fleur.”</div>
+    <div class="arrow">→</div>
+    <div class="side"><span class="tag">the page</span>¶2, sentence 2 now reads “fleur”. The command is gone, and “and the light turned gold.” stays.</div>
+  </div>
+  <h3>Things you can say</h3>
+  <table>
+    <tr><td><em>“Scratch that.”</em></td><td class="quiet" style="text-align:right">deletes the sentence just spoken</td></tr>
+    <tr><td><em>“Make ‘river’ bold.”</em></td><td class="quiet" style="text-align:right">bold, italic, code, strike</td></tr>
+    <tr><td><em>“Make this a heading.”</em></td><td class="quiet" style="text-align:right">heading, quote, bullet point</td></tr>
+    <tr><td><em>“Change late to early.”</em></td><td class="quiet" style="text-align:right">replaces words, wherever they are</td></tr>
+    <tr><td><em>“Go to the end of paragraph three.”</em></td><td class="quiet" style="text-align:right">moves your cursor there</td></tr>
+    <tr><td><em>“Scroll to paragraph three.”</em></td><td class="quiet" style="text-align:right">shows it; your cursor stays put</td></tr>
+    <tr><td><em>“Guardian, is this date right?”</em></td><td class="quiet" style="text-align:right">answered in the chat</td></tr>
+  </table>
+  <p>Numbers can be said as words. If a word in your command sounds like a name already in the note, the guardian uses the note’s spelling. A command that trails off at the very end is left alone until you finish it.</p>
+  <div class="aside">
+    <div class="who"><span class="diamond"></span>How the guardian works</div>
+    <p>It reads only freshly dictated text, fixes words that were clearly misheard and the punctuation, and otherwise leaves your sentences alone. It will reword something only when you ask it to, by voice or in the chat.</p>
+  </div>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 7. Guardian ================= -->
+<section class="page">
+  <div class="runhead"><span>iii · the guardian</span><span class="mark">¶</span></div>
+  <div class="opener">
+    <div class="chapter">chapter iii</div>
+    <h1>The Guardian</h1>
+    <div class="rule"></div>
+    <p class="lede">Transcriptaze runs no language model of its own. The guardian is one you bring — ideally one that already knows your work.</p>
+  </div>
+  <p>The app serves the <em>Model Context Protocol</em> on your Mac, at <code>http://127.0.0.1:7337/mcp</code>. It is reachable from this computer only, never from the network. Any MCP-capable assistant can connect and become the guardian of the open note. If that assistant knows your project, your other documents or your conversation with it, it brings all of that to getting names and terms right.</p>
+
+  <h2>Connecting</h2>
+  <p>Press <span class="keys"><kbd>⌥</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd>,</span> or choose <em>Copy for LLM</em> in the chat’s <span class="quiet">···</span> menu, the guardian panel or Settings. This copies one block with the address, ready-made configuration and the working routine. Paste it to your assistant. Then, for example:</p>
+  <h3>Claude Code</h3>
+  <p class="flush"><code>claude mcp add --transport http transcriptaze http://127.0.0.1:7337/mcp</code></p>
+  <h3>Claude Desktop and other stdio clients</h3>
+  <p class="flush">Use the bundled bridge, <code>Transcriptaze.app/Contents/MacOS/transcriptaze-mcp</code>, as the server command.</p>
+  <p style="margin-top:6px">Then ask it to <em>“be the guardian of my Transcriptaze note.”</em> The server gives it its full instructions when it connects. From then on it waits for you to speak or write, edits, and waits again.</p>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 8. Overview figure ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>iii · the guardian</span></div>
+  <h2 style="margin-top:0">The window</h2>
+  <figure>
+    <div class="callouts">
+      <div class="frame"><img src="img/overview.png" alt=""></div>
+      <span class="dot" style="left:10%;top:6%">1</span>
+      <span class="dot" style="left:32%;top:20%">2</span>
+      <span class="dot" style="left:21%;top:93.6%">3</span>
+      <span class="dot" style="left:47.6%;top:15.3%">4</span>
+      <span class="dot" style="left:90.6%;top:7%">5</span>
+      <span class="dot" style="left:84.4%;top:96.8%">6</span>
+    </div>
+  </figure>
+  <div class="legend">
+    <span class="n">1</span><span><strong>Notes.</strong> Every note in your folder, newest first, with search.</span>
+    <span class="n">2</span><span><strong>The chat.</strong> Your conversation with the guardian about this note. Its edits appear as quiet one-line notes.</span>
+    <span class="n">3</span><span><strong>The pointer.</strong> What your ghost cursor points at, sent with each message.</span>
+    <span class="n">4</span><span><strong>The page,</strong> with paragraph numbers in the margin and highlights the guardian made while fact-checking.</span>
+    <span class="n">5</span><span><strong>The format bar,</strong> which fades while you write.</span>
+    <span class="n">6</span><span><strong>The guardian’s status:</strong> what it last did. Click it for the full log and to disconnect.</span>
+  </div>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 9. Guardian II ================= -->
+<section class="page">
+  <div class="runhead"><span>iii · the guardian</span><span class="mark">¶</span></div>
+  <h2 style="margin-top:0">Knowing what it is doing</h2>
+  <p class="flush">The diamond in the footer is faint when no guardian is connected, steady when one is listening, and pulsing while it reads. Beside it is its last action, such as <span class="lapis">¶1 “1946” → “1945”</span>; click for the full log. Each edit is one undo step.</p>
+
+  <h2>Disconnecting</h2>
+  <p><em>Voice › Disconnect Guardian</em> (<span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>G</kbd>)</span> refuses its calls and tells it to stop. <em>Allow Guardian</em> lets it back in.</p>
+
+  <h2>What the guardian can do</h2>
+  <table class="tools">
+    <tr><td><code>read_document</code></td><td>Reads the note with ¶ and sentence numbers, fresh dictation marked, your cursor and your highlights</td></tr>
+    <tr><td><code>wait_for_dictation</code></td><td>Waits until you dictate something or write in the chat</td></tr>
+    <tr><td><code>replace_text</code> · <code>delete_text</code> · <code>insert_text</code> · <code>rewrite_sentence</code></td><td>Edits, each found by paragraph number and an exact quote, so its edits stay safe while you keep talking</td></tr>
+    <tr><td><code>split_paragraph</code> · <code>merge_paragraphs</code> · <code>insert_paragraph</code> · <code>delete_paragraph</code></td><td>Paragraph structure</td></tr>
+    <tr><td><code>format_text</code></td><td>Bold, italic, headings, quotes, lists</td></tr>
+    <tr><td><code>highlight_text</code> · <code>clear_highlights</code></td><td>The three inks, with notes</td></tr>
+    <tr><td><code>reply_in_chat</code> · <code>read_chat</code></td><td>The conversation</td></tr>
+    <tr><td><code>list_notes</code> · <code>read_note</code></td><td>Your other notes, for names and context</td></tr>
+  </table>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 10. Chat ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>iv · the chat</span></div>
+  <div class="opener">
+    <div class="chapter">chapter iv</div>
+    <h1>The Chat</h1>
+    <div class="rule"></div>
+    <p class="lede">A conversation with the guardian, beside the page.</p>
+  </div>
+  <p>Click into the chat field, or press <span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>M</kbd>,</span> and write; Return sends, <span class="keys"><kbd>Esc</kbd></span> returns to the page. <span class="keys"><kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd></span> hides or shows the chat.</p>
+
+  <h2>The ghost cursor</h2>
+  <p>In the chat, your cursor stays on the page as a <em>ghost</em>: a thin bar with a ring, or a dotted underline under a selection. A chip above the field shows what it points at, and every message carries it, so <em>“is this right?”</em> needs no explaining.</p>
+  <figure>
+    <div class="frame"><img src="img/ghost.png" alt=""></div>
+    <figcaption><span class="fig">fig. 1</span>The ghost after “Monnet”, left there while you write in the chat.</figcaption>
+  </figure>
+  <figure style="width:64%">
+    <div class="frame"><img src="img/composer.png" alt=""></div>
+    <figcaption><span class="fig">fig. 2</span>The pointer chip, ¶2 [2], and a message dictated into the chat. The × stops pointing anywhere.</figcaption>
+  </figure>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 11. Chat II ================= -->
+<section class="page">
+  <div class="runhead"><span>iv · the chat</span><span class="mark">¶</span></div>
+  <div class="ragged" style="display:grid;grid-template-columns:142px 1fr;gap:14px;align-items:start">
+    <figure style="margin-top:0">
+      <div class="frame"><img src="img/chat.png" alt=""></div>
+      <figcaption><span class="fig">fig. 3</span>A fact-check, start to finish.</figcaption>
+    </figure>
+    <div>
+      <h2 style="margin-top:0">Reading the conversation</h2>
+      <p class="flush">Your messages sit on the right, in a soft bubble, with what you were pointing at above them in small type. The guardian’s replies sit on the left behind a lapis rule.</p>
+      <p>Between them, in small lapis lines, are the edits it made, so you can read each reply against what it actually did.</p>
+      <p>Under your last message you see whether the guardian has it: <em>Sent</em>, then <em>Read</em>, with three dots while it works. If no guardian is connected, it says so.</p>
+      <h2>Asking for changes</h2>
+      <p class="flush">In the chat the guardian may do more than fix mishearings. Ask it to reword a sentence, tighten a paragraph or move something, and it does, then tells you what it did. Ask before it acts: “what would you cut here?”</p>
+      <h2>By voice alone</h2>
+      <p class="flush">You never need the keyboard. While dictating on the page, begin with <em>“Guardian, …”</em> and ask. The guardian lifts your words off the page into the chat, marked <span class="quiet">said on the page</span>, and answers there. In the chat field, end with <em>“send it”</em> and pause.</p>
+    </div>
+  </div>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 12. Highlights ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>v · highlights</span></div>
+  <div class="opener">
+    <div class="chapter">chapter v</div>
+    <h1>Highlights</h1>
+    <div class="rule"></div>
+    <p class="lede">Three inks — yellow, green and pink — for marking text. You and the guardian both use them.</p>
+  </div>
+  <h2 style="margin-top:4px">Making one</h2>
+  <p class="flush">Select some text. Three swatches rise in the margin beside it; click one. If the window is narrow, they sit just above the selection instead.</p>
+  <figure>
+    <div class="frame"><img src="img/palette.png" alt=""></div>
+    <figcaption><span class="fig">fig. 4</span>The swatches beside a selection. A fourth, hollow swatch appears when the selection already holds highlights; it removes them.</figcaption>
+  </figure>
+  <p>From the keyboard: <span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>1</kbd></span> yellow, <span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>2</kbd></span> green, <span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>3</kbd></span> pink, and <span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>0</kbd></span> to remove highlights from the selection. These are in the Format menu too.</p>
+
+  <h2>Letting one go</h2>
+  <p><strong>Click it</strong> and it fades away. Or simply <strong>edit inside it</strong>: changing highlighted words dismisses the highlight, because what it marked is no longer there. Typing just after it leaves it alone. Clicked one away by mistake? <span class="keys"><kbd>⌘</kbd><kbd>Z</kbd></span> brings it back.</p>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 13. Highlights II ================= -->
+<section class="page">
+  <div class="runhead"><span>v · highlights</span><span class="mark">¶</span></div>
+  <h2 style="margin-top:0">What the inks mean</h2>
+  <p class="flush">The colours mean whatever you agree with the guardian. Unless you say otherwise, it uses them for fact-checking:</p>
+  <table style="margin:7px 0 8px">
+    <tr><td style="width:66px"><span class="swatch g"></span>Green</td><td><span class="hl g">confirmed</span> — checked, and true</td></tr>
+    <tr><td><span class="swatch y"></span>Yellow</td><td><span class="hl y">partly true</span>, uncertain, or worth a second look</td></tr>
+    <tr><td><span class="swatch p"></span>Pink</td><td><span class="hl p">false</span>, or a problem</td></tr>
+  </table>
+  <p>The guardian’s highlights carry a tiny lapis diamond at their end. Hold the mouse over any highlight to read the guardian’s note: the correct fact, or why it is unsure.</p>
+  <figure>
+    <div class="frame"><img src="img/factcheck-page.png" alt=""></div>
+    <figcaption><span class="fig">fig. 5</span>After “fact-check the whole note”. The false date was pink until the guardian corrected it, which dismissed the highlight.</figcaption>
+  </figure>
+  <h3>A fact-checking routine</h3>
+  <ol>
+    <li>Ask in the chat: <em>“Fact-check this note.”</em></li>
+    <li>Read the pinks and yellows; hover for the notes.</li>
+    <li>Say <em>“fix the pinks”</em>, or correct them yourself. Each fix clears its highlight.</li>
+    <li>Click away any highlight you are done with.</li>
+  </ol>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 14. Notes & Settings ================= -->
+<section class="page even">
+  <div class="runhead"><span class="mark">¶</span><span>vi · notes &amp; settings</span></div>
+  <div class="opener" style="padding-top:20px">
+    <div class="chapter">chapter vi</div>
+    <h1>Notes &amp; Settings</h1>
+    <div class="rule"></div>
+  </div>
+  <h2 style="margin-top:0">Plain files</h2>
+  <p class="flush">Every note is an ordinary Markdown file in <code>~/Documents/Transcriptaze</code>, saved as you write. The file is named after the note’s first line, and renamed when the first line changes. Any other app, and any guardian, can read it.</p>
+  <p>Highlights and the chat are not written into your Markdown. They live in a small companion file in a hidden <code>.transcriptaze</code> folder beside your notes, and follow the note when it is renamed.</p>
+  <h3>The sidebar</h3>
+  <p class="flush"><span class="keys"><kbd>⌘</kbd><kbd>N</kbd></span> starts a new note. Search filters by title and text. Right-click a note to show it in Finder or move it to the Trash.</p>
+  <h3>Export</h3>
+  <p class="flush"><em>File › Export as Markdown…</em> (<span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>E</kbd>)</span> or <em>Export as Plain Text…</em>, which strips the markup.</p>
+
+  <h2>Settings <span class="quiet" style="font-weight:400;font-size:9px">⌘,</span></h2>
+  <table>
+    <tr><td>Page</td><td class="quiet" style="text-align:right">Book or Manuscript</td></tr>
+    <tr><td>Typeface</td><td class="quiet" style="text-align:right">New York, Iowan Old Style, Charter, Avenir Next</td></tr>
+    <tr><td>Size · leading · measure</td><td class="quiet" style="text-align:right">14–28 pt · 1.2–2.0 · 480–900 pt</td></tr>
+    <tr><td>Chapter-and-verse numbering</td><td class="quiet" style="text-align:right">on or off</td></tr>
+    <tr><td>Guardian</td><td class="quiet" style="text-align:right">server address, setup to copy</td></tr>
+  </table>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 15. Shortcuts ================= -->
+<section class="page">
+  <div class="runhead"><span>keyboard shortcuts</span><span class="mark">¶</span></div>
+  <h2 style="margin-top:0;font-size:15px;margin-bottom:10px">Keyboard Shortcuts</h2>
+  <div class="cols">
+    <div class="keep">
+      <h3>Voice &amp; guardian</h3>
+      <table>
+        <tr><td>Dictation on / off</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>D</kbd></span></td></tr>
+        <tr><td>Go to the chat</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>M</kbd></span></td></tr>
+        <tr><td>Back to the page</td><td class="k"><span class="keys"><kbd>Esc</kbd></span></td></tr>
+        <tr><td>Disconnect / allow</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>G</kbd></span></td></tr>
+        <tr><td>Copy connection</td><td class="k"><span class="keys"><kbd>⌥</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd></span></td></tr>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>Highlights</h3>
+      <table>
+        <tr><td><span class="swatch y"></span>Yellow</td><td class="k"><span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>1</kbd></span></td></tr>
+        <tr><td><span class="swatch g"></span>Green</td><td class="k"><span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>2</kbd></span></td></tr>
+        <tr><td><span class="swatch p"></span>Pink</td><td class="k"><span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>3</kbd></span></td></tr>
+        <tr><td>Remove</td><td class="k"><span class="keys"><kbd>⌥</kbd><kbd>⌘</kbd><kbd>0</kbd></span></td></tr>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>View</h3>
+      <table>
+        <tr><td>Show / hide chat</td><td class="k"><span class="keys"><kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd></span></td></tr>
+        <tr><td>Focus mode</td><td class="k"><span class="keys"><kbd>⌃</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd></span></td></tr>
+        <tr><td>Numbering</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>L</kbd></span></td></tr>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>Notes</h3>
+      <table>
+        <tr><td>New note</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>N</kbd></span></td></tr>
+        <tr><td>Export as Markdown</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>E</kbd></span></td></tr>
+        <tr><td>Settings</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>,</kbd></span></td></tr>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>Format</h3>
+      <table>
+        <tr><td>Bold · italic</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>B</kbd> <kbd>⌘</kbd><kbd>I</kbd></span></td></tr>
+        <tr><td>Link</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>K</kbd></span></td></tr>
+        <tr><td>Heading 1–3</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>1</kbd>–<kbd>3</kbd></span></td></tr>
+        <tr><td>Body text</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>0</kbd></span></td></tr>
+        <tr><td>Bulleted list</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd></span></td></tr>
+        <tr><td>Numbered list</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd></span></td></tr>
+        <tr><td>Quote</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>.</kbd></span></td></tr>
+        <tr><td>Code</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd></span></td></tr>
+        <tr><td>Strikethrough</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>X</kbd></span></td></tr>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>Help</h3>
+      <table>
+        <tr><td>This manual</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>?</kbd></span></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="folio"></div>
+</section>
+
+<!-- ================= 16. Colophon ================= -->
+<section class="page even">
+  <div class="colophon">
+    <div class="fleuron">❦</div>
+    <p>Set in New York, the typeface<br>the app sets your notes in.</p>
+    <p>Transcription by Kyutai, <em>stt-1b-en_fr</em>,<br>running on your Mac. Weights licensed CC-BY 4.0.</p>
+    <p>The guardian is yours to choose.</p>
+  </div>
+  <div class="folio"></div>
+</section>
+
+</body>
+</html>

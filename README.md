@@ -16,7 +16,7 @@ Notes are plain `.md` files in `~/Documents/Transcriptaze`. They export as Markd
 
 ## The chat
 
-Between the notes and the page is a conversation with the guardian (⌃⌘C shows or hides it, ⇧⌘M jumps to it, Esc returns to the page). When you click into it, your caret stays on the page as a **ghost**: a thin bar with a ring, or a dotted underline under a selection. Each message carries what the ghost points at, so "is this right?" needs no explaining. The guardian's edits appear in the conversation as quiet one-line notes. The chat is saved per note, with the highlights.
+Between the notes and the page is a conversation with the guardian (⌃⌘C shows or hides it, ⇧⌘M jumps to it, Esc returns to the page). When you click into it, your caret stays on the page as a **ghost**: a thin bar with a ring, or a dotted underline under a selection. Each message carries what the ghost points at, so "is this right?" needs no explaining. It also works by voice alone: while dictating on the page, say "Guardian, …" and ask; the guardian moves your words into the chat and answers there. In the chat field, end with "send it" and pause. The guardian's edits appear in the conversation as quiet one-line notes. The chat is saved per note, with the highlights.
 
 ## Voice
 
@@ -36,6 +36,7 @@ The app serves MCP over Streamable HTTP at `http://127.0.0.1:7337/mcp`, on loopb
 | `format_text` | bold, italic, code, strike, heading1–3, quote, bullet, numbered, plain |
 | `highlight_text`, `clear_highlights` | Yellow, green or pink, with an optional note shown on hover |
 | `reply_in_chat`, `read_chat` | The conversation beside the note. New messages arrive in `wait_for_dictation`, with where the user's ghost cursor points |
+| `scroll_to` | "Scroll to paragraph 3": shows it without moving your cursor |
 | `move_user_cursor`, `focus` | Move your dictation cursor ("go to the end of paragraph 3"), or the guardian's own |
 | `list_notes`, `read_note` | Other notes, for names and context |
 | `wait_for_dictation`, `finish_review` | The loop for external guardians: block until fresh text or a chat message arrives, edit, then acknowledge |
@@ -49,6 +50,10 @@ claude mcp add --transport http transcriptaze http://127.0.0.1:7337/mcp
 ```
 
 Claude Desktop and other stdio clients use the bundled bridge, `Transcriptaze.app/Contents/MacOS/transcriptaze-mcp`.
+
+## The manual
+
+*Help › Transcriptaze Manual* (⌘?) opens `Manual.pdf` in its own window. It is typeset from `Resources/Manual/manual.html` by `swift Scripts/make_manual.swift`, which also warns when a page overflows (`--preview <dir>` writes each page as PNG). Rebuild it after changing the app.
 
 ## Build and test
 
