@@ -51,6 +51,11 @@ struct TranscriptazeApp: App {
                 Button("Start / Stop Dictation") { model.toggleDictation() }.keyboardShortcut("d", modifiers: [.command, .shift])
                 Button("Dictate from Audio File…") { model.dictateFromFile() }
                 Divider()
+                Button("Read Aloud") { model.readAloud() }
+                    .keyboardShortcut("r", modifiers: [.command, .option])
+                Button("Stop Reading") { model.reader.stopReading() }
+                    .keyboardShortcut(".", modifiers: .command)
+                Divider()
                 Button(model.guardianAllowed ? "Disconnect Guardian" : "Allow Guardian") {
                     if model.guardianAllowed { model.disconnectGuardian() } else { model.allowGuardian() }
                 }

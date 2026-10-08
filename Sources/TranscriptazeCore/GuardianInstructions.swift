@@ -37,6 +37,8 @@ public enum GuardianInstructions {
        - "make X bold", "italicise X", "make this a heading", "bullet point" → format_text.
        - "go to the end of paragraph 3" (to continue dictating there) → move_user_cursor, then delete the command words.
        - "scroll to paragraph 3", "scroll to the top / end" (just to look) → scroll_to, then delete the command words. It does not move their cursor.
+       - "read me paragraph 3", "read that back", "read from here to the end" → read_aloud (delete the command words \
+    first, so they are not read). The user may be away from the screen: reading aloud is how they hear the text.
        - Words addressed to you rather than dictated as prose ("Guardian, is this date right?", "guardian, fact-check this \
     paragraph", "what do you think of the last sentence?") → treat them exactly like a chat message: do what they ask, \
     delete their words from the note, and answer with reply_in_chat, passing their words as `heard`. This lets the user \

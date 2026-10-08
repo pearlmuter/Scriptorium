@@ -22,7 +22,9 @@ Between the notes and the page is a conversation with the guardian (⌃⌘C show
 
 ⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). The weights are reused from `~/Library/Application Support/Pendragon/Models/Kyutai`. You can also place them in `~/Library/Application Support/Transcriptaze/Models/Kyutai` or set `TRANSCRIPTAZE_STT_DIR`.
 
-Dictation goes wherever you are writing: the page, or the chat field. "New paragraph" and "new line" act **instantly**: the words never reach the page. Everything else is left to the guardian. *Voice › Dictate from Audio File…* plays a recording through the same pipeline in real time.
+Dictation goes wherever you are writing: the page, or the chat field. With the chat open, the Dictate button and the guardian's status sit at its top, clear of the text.
+
+**Reading aloud.** *Voice › Read Aloud* (⌥⌘R) reads from the caret (or the selection) in Kokoro's voice; ⌘. stops. The guardian can do it too (`read_aloud`), so "read me paragraph 3" works by voice. The sentence being heard is washed in lapis, and dictation pauses so the microphone doesn't transcribe the voice. It runs the official `kokoro` package through `Resources/Speech/kokoro_daemon.py`, reusing the Python runtime and weights Pendragon installs (`~/Library/Application Support/Pendragon/kokoro_runtime`, `…/Models/Kokoro`), so it is offline and needs no download. Set `TRANSCRIPTAZE_KOKORO_PYTHON` to use another Python with `pip install kokoro soundfile`. The voice warms up in the background at launch. "New paragraph" and "new line" act **instantly**: the words never reach the page. Everything else is left to the guardian. *Voice › Dictate from Audio File…* plays a recording through the same pipeline in real time.
 
 ## The guardian
 
@@ -36,6 +38,7 @@ The app serves MCP over Streamable HTTP at `http://127.0.0.1:7337/mcp`, on loopb
 | `format_text` | bold, italic, code, strike, heading1–3, quote, bullet, numbered, plain |
 | `highlight_text`, `clear_highlights` | Yellow, green or pink, with an optional note shown on hover |
 | `reply_in_chat`, `read_chat` | The conversation beside the note. New messages arrive in `wait_for_dictation`, with where the user's ghost cursor points |
+| `read_aloud`, `stop_reading` | Read paragraphs aloud on the user's Mac |
 | `scroll_to` | "Scroll to paragraph 3": shows it without moving your cursor |
 | `move_user_cursor`, `focus` | Move your dictation cursor ("go to the end of paragraph 3"), or the guardian's own |
 | `list_notes`, `read_note` | Other notes, for names and context |

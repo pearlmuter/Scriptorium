@@ -130,7 +130,7 @@ struct EditorPane: View {
                     .opacity(model.chromeVisible ? 1 : 0)
                     .padding(.top, 10)
                 Spacer()
-                Footer(dictation: model.dictation, guardian: model.guardian)
+                Footer(dictation: model.dictation, guardian: model.guardian, reader: model.reader)
             }
         }
         .background(Color(Palette.paper))
@@ -211,6 +211,11 @@ struct Footer: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var dictation: DictationEngine
     @ObservedObject var guardian: GuardianActivity
+    @ObservedObject var reader: ReadAloud
+
+    /// With the chat open, the voice and guardian controls live at its top,
+    /// where they never sit on the text; here only when it is hidden.
+    private var controlsHere: Bool { !model.showChat || model.focusMode }
 
     var body: some View {
         HStack(alignment: .center) {
@@ -223,18 +228,28 @@ struct Footer: View {
             .opacity(model.chromeVisible ? 1 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            micButton
-
-            Button { model.showGuardianPanel.toggle() } label: { guardianLabel }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .popover(isPresented: $model.showGuardianPanel, arrowEdge: .top) { GuardianLog(guardian: guardian) }
+            if controlsHere {
+                DictateButton(dictation: dictation, recedes: true)
+                ReadingIndicator(reader: reader)
+                GuardianStatusButton(guardian: guardian, recedes: true)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
         .padding(.horizontal, 22)
         .padding(.bottom, 12)
     }
+}
 
-    private var micButton: some View {
+/// Starts and stops dictation; shows the level while listening.
+struct DictateButton: View {
+    @EnvironmentObject var model: AppModel
+    @ObservedObject var dictation: DictationEngine
+    /// In the page's footer it recedes while you write; in the chat it stays.
+    var recedes = false
+
+    var body: some View { micButton }
+
+    var micButton: some View {
         Button { model.toggleDictation() } label: {
             HStack(spacing: 7) {
                 switch dictation.state {
@@ -243,7 +258,7 @@ struct Footer: View {
                     Text("Loading voice model")
                 case .ready:
                     Image(systemName: "mic")
-                    Text("Dictate").opacity(model.chromeVisible ? 1 : 0)
+                    Text("Dictate").opacity(!recedes || model.chromeVisible ? 1 : 0)
                 case .listening:
                     LevelDots(level: dictation.level)
                     Text("Listening")
@@ -264,6 +279,62 @@ struct Footer: View {
         .accessibilityIdentifier("dictate")
     }
 
+}
+
+/// While the voice reads: where it is, and a way to stop it.
+struct ReadingIndicator: View {
+    @ObservedObject var reader: ReadAloud
+
+    var body: some View { readingButton }
+
+    /// While the voice reads: where it is, and a way to stop it.
+    @ViewBuilder var readingButton: some View {
+        switch reader.state {
+        case .idle:
+            EmptyView()
+        case .loading, .reading:
+            Button { reader.stopReading() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "speaker.wave.2.fill")
+                    if case .reading(let p) = reader.state { Text("Reading ¶\(p)") }
+                    else if case .loading(let f?) = reader.state { Text("Loading voice \(Int(f * 100))%") }
+                    else { Text("Preparing voice") }
+                    Image(systemName: "stop.fill").font(.system(size: 8.5))
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color(Palette.lapis))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(Color(Palette.lapis).opacity(0.09)))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .help("Stop reading (⌘.)")
+        case .failed(let message):
+            Button { reader.stopReading() } label: {
+                Label("Voice unavailable", systemImage: "speaker.slash")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color(Palette.secondaryInk))
+            }
+            .buttonStyle(.plain)
+            .help(message)
+        }
+    }
+
+}
+
+/// The guardian's state and last action; opens its log and the disconnect switch.
+struct GuardianStatusButton: View {
+    @EnvironmentObject var model: AppModel
+    @ObservedObject var guardian: GuardianActivity
+    var recedes = false
+
+    var body: some View {
+        Button { model.showGuardianPanel.toggle() } label: { guardianLabel }
+            .buttonStyle(.plain)
+            .popover(isPresented: $model.showGuardianPanel, arrowEdge: .bottom) { GuardianLog(guardian: guardian) }
+    }
+
     private var guardianLabel: some View {
         HStack(spacing: 6) {
             Diamond()
@@ -277,7 +348,7 @@ struct Footer: View {
         }
         .font(.system(size: 11.5, design: .serif))
         .foregroundStyle(Color(Palette.lapis).opacity(0.85))
-        .opacity(model.chromeVisible || guardian.status == .working ? 1 : 0.55)
+        .opacity(!recedes || model.chromeVisible || guardian.status == .working ? 1 : 0.55)
     }
 
     private var guardianText: String {

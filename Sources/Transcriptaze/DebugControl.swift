@@ -101,6 +101,8 @@ enum DebugControl {
         case "/debug/geometry":
             let tv = model.editor.textView, sv = model.editor.scrollView
             return "scroll \(sv.frame) content \(sv.contentSize) clip \(sv.contentView.bounds)\ntext \(tv.frame) inset \(tv.textContainerInset) container \(tv.textContainer?.containerSize ?? .zero)"
+        case "/debug/reader":
+            return "\(model.reader.state) muted=\(model.dictation.muted) \(model.reader.diagnostics)"
         case "/debug/log":
             return model.guardian.log.map { "\($0.isError ? "✗" : "✓") \($0.text)" }.joined(separator: "\n")
         case "/debug/appearance":

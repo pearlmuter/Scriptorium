@@ -144,6 +144,11 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
             let end = max(start, edit.transform(NSMaxRange(g)))
             textView.guardianRange = NSRange(location: start, length: end - start)
         }
+        if let g = textView.readingRange {
+            let edit = TextEdit(range: NSRange(location: editedRange.location, length: editedRange.length - delta), replacement: String(repeating: " ", count: editedRange.length))
+            let start = edit.transform(g.location)
+            textView.readingRange = NSRange(location: start, length: max(start, edit.transform(NSMaxRange(g))) - start)
+        }
         if let g = textView.ghostRange {
             let edit = TextEdit(range: NSRange(location: editedRange.location, length: editedRange.length - delta), replacement: String(repeating: " ", count: editedRange.length))
             let start = edit.transform(g.location)

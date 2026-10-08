@@ -29,6 +29,8 @@ final class ManuscriptTextView: NSTextView {
     private var fadeTimer: Timer?
     /// Where the user's caret was when they went to the chat.
     var ghostRange: NSRange? { didSet { needsDisplay = true } }
+    /// The sentence being read aloud, washed in lapis while it is heard.
+    var readingRange: NSRange? { didSet { needsDisplay = true } }
 
     var onFormat: ((String) -> Void)?
     /// A plain click on a highlight.
@@ -81,6 +83,7 @@ final class ManuscriptTextView: NSTextView {
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)
         drawHighlights()
+        drawReading()
         drawGuardianWash()
     }
 
@@ -138,6 +141,12 @@ final class ManuscriptTextView: NSTextView {
                 numeral.draw(at: NSPoint(x: start.x - w - 2.5, y: raisedBaseline - verse.ascender))
             }
         }
+    }
+
+    private func drawReading() {
+        guard let range = readingRange, range.length > 0, NSMaxRange(range) <= (string as NSString).length else { return }
+        Palette.lapis.withAlphaComponent(0.11).setFill()
+        for r in markerRects(for: range) { marker(r).fill() }
     }
 
     private func drawGuardianWash() {

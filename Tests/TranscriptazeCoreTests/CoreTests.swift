@@ -201,3 +201,14 @@ final class DictationTests: XCTestCase {
     }
 }
 
+
+final class NarrationTests: XCTestCase {
+    func testPassagesAreSentencesWithoutMarkdown() {
+        let text = "# Title\nThe **river** was wide. Yes. It was cold that year.\n- A list item here, long enough to stand alone.\nLast."
+        let p = Narration.passages(from: 1, to: 3, in: text)
+        XCTAssertEqual(p.map(\.text), ["The river was wide. Yes. It was cold that year.", "A list item here, long enough to stand alone.", "Last."])
+        XCTAssertEqual(p.map(\.paragraph), [1, 2, 3])
+        XCTAssertEqual(p.first?.sentence, 1)
+        XCTAssertEqual(Narration.passages(from: 1, to: 1, sentence: 3, in: text).map(\.text), ["It was cold that year."])
+    }
+}

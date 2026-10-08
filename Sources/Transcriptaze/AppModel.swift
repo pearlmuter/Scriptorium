@@ -34,6 +34,7 @@ final class AppModel: ObservableObject, NoteLibrary {
     let dictation = DictationEngine()
     let guardian = GuardianActivity()
     let chat = ChatLog()
+    let reader: ReadAloud
     private let toolbox: GuardianToolbox
     private var server: MCPHTTPServer?
     private var reflex = CommandReflex()
@@ -49,14 +50,21 @@ final class AppModel: ObservableObject, NoteLibrary {
         let typesetting = Typesetting.load()
         self.typesetting = typesetting
         editor = EditorController(typesetting: typesetting)
+        reader = ReadAloud()
         toolbox = GuardianToolbox()
         toolbox.host = editor
         toolbox.library = self
         toolbox.chat = chat
+        toolbox.narrator = reader
         guardian.editor = editor
         wire()
         startMCP()
         dictation.load(modelDirectory: nil)
+        // After the speech model, so the two don't compete for the first seconds.
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            self?.reader.warmUp()
+        }
         refreshNotes()
         if let first = notes.first { open(first.url) } else { newNote() }
     }
@@ -70,6 +78,12 @@ final class AppModel: ObservableObject, NoteLibrary {
             self.chatFocused = false
         }
         chat.onChange = { [weak self] in self?.scheduleSidecarSave() }
+        reader.onPassage = { [weak self] passage in self?.showReading(passage) }
+        // The microphone would transcribe the voice: dictation holds its ears while it reads.
+        reader.onReadingChange = { [weak self] reading in
+            self?.dictation.muted = reading
+            if !reading { self?.editor.textView.readingRange = nil }
+        }
         dictation.onText = { [weak self] text in
             guard let self else { return }
             self.pauseTask?.cancel()
@@ -124,6 +138,7 @@ final class AppModel: ObservableObject, NoteLibrary {
     func shutdown() {
         saveNow()
         dictation.stop()
+        reader.shutdown()
         server?.stop()
     }
 
@@ -284,6 +299,27 @@ final class AppModel: ObservableObject, NoteLibrary {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         editor.isDictating = true
         dictation.dictate(file: url)
+    }
+
+    // MARK: Reading aloud
+
+    /// Voice › Read Aloud: the selected paragraphs, or from the caret to the end of the note.
+    func readAloud() {
+        let text = editor.text
+        let outline = Outline(text: text)
+        let sel = editor.textView.selectedRange()
+        guard let start = outline.address(of: sel.location) ?? outline.paragraphs.first.flatMap({ $0.number.map { ($0, Optional(1)) } }) else { return }
+        let end = sel.length > 0 ? (outline.address(of: NSMaxRange(sel))?.paragraph ?? start.paragraph) : outline.paragraphs.count
+        reader.read(Narration.passages(from: start.paragraph, to: end, sentence: start.sentence, in: text))
+    }
+
+    /// The sentence being heard is shown in the guardian's lapis, and kept in view.
+    private func showReading(_ passage: Passage) {
+        let text = editor.text
+        guard let block = Outline(text: text).paragraph(passage.paragraph),
+              let sentence = block.sentences.first(where: { $0.number == passage.sentence }) else { return }
+        editor.textView.readingRange = sentence.range
+        editor.textView.scrollRangeToVisible(sentence.range)
     }
 
     // MARK: Export

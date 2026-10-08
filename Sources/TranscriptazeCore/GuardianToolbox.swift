@@ -50,6 +50,8 @@ public final class GuardianToolbox {
     public weak var library: NoteLibrary?
     /// The conversation with the user about this note.
     public weak var chat: ChatLog?
+    /// The reading voice.
+    public weak var narrator: Narrator?
 
     /// False when the user has disconnected the guardian: every tool is refused,
     /// and a waiting wait_for_dictation returns at once, so the LLM's loop ends.
@@ -125,6 +127,12 @@ public final class GuardianToolbox {
         ToolSpec(name: "reply_in_chat",
                  description: "Answer the user in the chat panel beside the note. Use when they wrote to you in the chat (shown under CHAT in read_document / wait_for_dictation), or spoke to you while dictating on the page (then pass their words as `heard`, and delete them from the note). Keep it short; the user is writing.",
                  inputSchema: schema(["text": str("Your message. Plain text; refer to places as ¶n or ¶n [s]."), "heard": str("If the user spoke to you on the page instead of writing in the chat: their words, cleaned up. They are shown in the chat as the user's message, before your reply.")], required: ["text"])),
+        ToolSpec(name: "read_aloud",
+                 description: "Read part of the note aloud to the user, in a natural voice (Kokoro, on their Mac). For 'read me paragraph 3', 'read from here to the end', 'read the last two paragraphs'. The sentence being read is shown on the page. Returns at once; the reading continues.",
+                 inputSchema: schema(["paragraph": ["type": "integer", "description": "First paragraph (¶) to read."], "to_paragraph": ["type": "integer", "description": "Last paragraph to read (default: the same paragraph). -1 = to the end of the note."], "sentence": ["type": "integer", "description": "Optional: start at this sentence of the first paragraph."]], required: ["paragraph"])),
+        ToolSpec(name: "stop_reading",
+                 description: "Stop reading aloud.",
+                 inputSchema: schema([:])),
         ToolSpec(name: "scroll_to",
                  description: "Scroll the page to show a paragraph, without moving the user's cursor. For spoken 'scroll to paragraph 3', 'show me the top', 'scroll to the end'.",
                  inputSchema: schema(["paragraph": ["type": "integer", "description": "Paragraph number (¶). 0 = top of the note, -1 = the end."], "sentence": s], required: ["paragraph"])),
@@ -213,6 +221,22 @@ public final class GuardianToolbox {
             let offset = try TextOperations.offset(paragraph: pn, sentence: optInt("sentence"), atEnd: optString("position") != "start", in: text)
             host.setUserCursor(offset)
             return "The user's cursor is now at the \(optString("position") ?? "end") of ¶\(pn)\(optInt("sentence").map { " sentence \($0)" } ?? "")."
+        case "read_aloud":
+            guard let narrator else { throw OperationError("Reading aloud is not available.") }
+            if let why = narrator.unavailableReason { throw OperationError(why) }
+            let from = try int("paragraph")
+            let last = Outline(text: text).paragraphs.count
+            var to = optInt("to_paragraph") ?? from
+            if to < 0 || to > last { to = last }
+            _ = try TextOperations.scope(paragraph: from, sentence: nil, in: Outline(text: text))
+            let passages = Narration.passages(from: from, to: max(from, to), sentence: optInt("sentence"), in: text)
+            guard !passages.isEmpty else { throw OperationError("There is nothing to read in ¶\(from).") }
+            narrator.read(passages)
+            let span = to > from ? "¶\(from)–\(to)" : "¶\(from)"
+            return "Reading \(span) aloud (about \(Narration.seconds(for: passages)) s). Dictation is paused while it reads."
+        case "stop_reading":
+            narrator?.stopReading()
+            return "Stopped reading."
         case "scroll_to":
             let pn = try int("paragraph")
             if pn <= 0 {

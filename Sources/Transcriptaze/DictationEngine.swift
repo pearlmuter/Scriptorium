@@ -28,6 +28,8 @@ final class DictationEngine: ObservableObject {
     private nonisolated(unsafe) var pending: [Float] = []
     private nonisolated(unsafe) var silentFrames = 0
     private nonisolated(unsafe) var heardSpeech = false
+    /// While the app reads aloud, the microphone's audio is dropped, so the voice is not transcribed.
+    nonisolated(unsafe) var muted = false
 
     func load(modelDirectory: URL?) {
         state = .loading
@@ -115,6 +117,7 @@ final class DictationEngine: ObservableObject {
     /// voice-activity horizon for pauses.
     private nonisolated func consume(_ samples: [Float]) {
         guard let transcriber else { return }
+        if muted { pending.removeAll(); return }
         pending.append(contentsOf: samples)
         let frame = 1920
         while pending.count >= frame {
