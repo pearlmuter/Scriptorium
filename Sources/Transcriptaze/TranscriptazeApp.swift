@@ -1,0 +1,76 @@
+import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
+
+@main
+struct TranscriptazeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var model = AppModel()
+
+    var body: some Scene {
+        WindowGroup("Transcriptaze", id: "main") {
+            ContentView()
+                .environmentObject(model)
+                .frame(minWidth: 640, minHeight: 420)
+                .onAppear { delegate.model = model }
+        }
+        .defaultSize(width: 1180, height: 820)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Note") { model.newNote() }.keyboardShortcut("n")
+            }
+            CommandGroup(after: .saveItem) {
+                Divider()
+                Button("Export as Markdown…") { model.export(as: UTType(filenameExtension: "md") ?? .plainText) }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                Button("Export as Plain Text…") { model.export(as: .plainText) }
+            }
+            CommandMenu("Format") {
+                Button("Bold") { model.editor.format("bold") }.keyboardShortcut("b")
+                Button("Italic") { model.editor.format("italic") }.keyboardShortcut("i")
+                Button("Strikethrough") { model.editor.format("strike") }
+                Button("Code") { model.editor.format("code") }
+                Button("Link") { model.editor.format("link") }.keyboardShortcut("k")
+                Divider()
+                Button("Heading 1") { model.editor.format("h1") }.keyboardShortcut("1")
+                Button("Heading 2") { model.editor.format("h2") }.keyboardShortcut("2")
+                Button("Heading 3") { model.editor.format("h3") }.keyboardShortcut("3")
+                Button("Body") { model.editor.format("body") }.keyboardShortcut("0")
+                Divider()
+                Button("Quote") { model.editor.format("quote") }
+                Button("Bulleted List") { model.editor.format("bullet") }
+                Button("Numbered List") { model.editor.format("numbered") }
+            }
+            CommandMenu("Voice") {
+                Button("Start / Stop Dictation") { model.toggleDictation() }.keyboardShortcut("d", modifiers: [.command, .shift])
+                Button("Dictate from Audio File…") { model.dictateFromFile() }
+                Divider()
+                Button(model.guardianAllowed ? "Disconnect Guardian" : "Allow Guardian") {
+                    if model.guardianAllowed { model.disconnectGuardian() } else { model.allowGuardian() }
+                }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Copy MCP Connection for LLM") { model.copyConnectionCard() }
+                    .keyboardShortcut("c", modifiers: [.command, .option, .shift])
+            }
+            CommandGroup(after: .sidebar) {
+                Button(model.focusMode ? "Leave Focus Mode" : "Focus Mode") { model.focusMode.toggle() }
+                    .keyboardShortcut("f", modifiers: [.command, .control, .shift])
+                Button(model.typesetting.showNumbers ? "Hide Numbering" : "Show Numbering") { model.typesetting.showNumbers.toggle() }
+                    .keyboardShortcut("l", modifiers: [.command, .shift])
+            }
+        }
+
+        Settings {
+            SettingsView().environmentObject(model)
+        }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var model: AppModel?
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { model?.shutdown() }
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+}

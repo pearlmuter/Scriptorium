@@ -1,0 +1,30 @@
+[package]
+name = "pendragon-stt"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Kyutai STT behind a C ABI for Pendragon"
+
+[lib]
+name = "pendragon_stt"
+# Static, to match how llama.cpp is linked: an archive referenced from the
+# Xcode project rather than a dylib to be found at runtime.
+crate-type = ["staticlib", "rlib"]
+
+# Kyutai's own stt-rs additionally pulls `sentencepiece` (C++ via cmake) and
+# `kaudio` (libopus via cmake). Neither is needed here: `sentencepiece.rs`
+# reads the tokeniser directly, and AVFoundation decodes audio on the Swift
+# side. That keeps cmake out of Pendragon's build.
+[dependencies]
+candle = { version = "0.9.1", package = "candle-core" }
+candle-nn = "0.9.1"
+moshi = "0.6.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = []
+metal = ["candle/metal", "candle-nn/metal"]
+
+[profile.release]
+debug = false
