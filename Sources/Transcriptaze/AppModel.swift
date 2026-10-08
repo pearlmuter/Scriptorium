@@ -21,15 +21,25 @@ final class AppModel: ObservableObject, NoteLibrary {
     @Published private(set) var guardianAllowed = true
     @Published private(set) var wordCount = 0
     @Published private(set) var caretAddress = ""
+    @Published var showChat = UserDefaults.standard.object(forKey: "showChat") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(showChat, forKey: "showChat") }
+    }
+    /// The user is typing (or dictating) in the chat; their caret is a ghost on the page.
+    @Published private(set) var chatFocused = false
+    @Published var chatDraft = ""
+    /// Bumped to ask the chat field to take focus.
+    @Published private(set) var chatFocusRequest = 0
 
     let store = NoteStore(folder: NoteStore.defaultFolder)
     let editor: EditorController
     let dictation = DictationEngine()
     let guardian = GuardianActivity()
+    let chat = ChatLog()
     private let toolbox: GuardianToolbox
     private var server: MCPHTTPServer?
     private var reflex = CommandReflex()
     private var saveTask: Task<Void, Never>?
+    private var sidecarTask: Task<Void, Never>?
     private var pauseTask: Task<Void, Never>?
     private var chromeTask: Task<Void, Never>?
     private var openURL: URL?
@@ -43,6 +53,7 @@ final class AppModel: ObservableObject, NoteLibrary {
         toolbox = GuardianToolbox()
         toolbox.host = editor
         toolbox.library = self
+        toolbox.chat = chat
         guardian.editor = editor
         wire()
         startMCP()
@@ -54,10 +65,16 @@ final class AppModel: ObservableObject, NoteLibrary {
     private func wire() {
         editor.onTextChange = { [weak self] in self?.textChanged() }
         editor.onSelectionChange = { [weak self] in self?.caretAddress = self?.editor.caretAddress ?? "" }
+        editor.onHighlightsChange = { [weak self] in self?.scheduleSidecarSave() }
+        editor.onReturnToPage = { [weak self] in
+            guard let self, self.chatFocused else { return }
+            self.chatFocused = false
+        }
+        chat.onChange = { [weak self] in self?.scheduleSidecarSave() }
         dictation.onText = { [weak self] text in
             guard let self else { return }
             self.pauseTask?.cancel()
-            self.editor.insertDictation(self.reflex.feed(text))
+            self.deliverDictation(self.reflex.feed(text))
             self.hideChrome()
         }
         dictation.onPause = { [weak self] in
@@ -70,13 +87,13 @@ final class AppModel: ObservableObject, NoteLibrary {
             self.pauseTask = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard let self, !Task.isCancelled else { return }
-                self.editor.insertDictation(self.reflex.flush())
+                self.deliverDictation(self.reflex.flush())
             }
         }
         dictation.onStop = { [weak self] in
             guard let self else { return }
             self.pauseTask?.cancel()
-            self.editor.insertDictation(self.reflex.flush())
+            self.deliverDictation(self.reflex.flush())
             self.editor.isDictating = false
         }
     }
@@ -84,7 +101,14 @@ final class AppModel: ObservableObject, NoteLibrary {
     private func startMCP() {
         let handler = MCPHandler(toolbox: toolbox)
         handler.onToolCall = { [weak self] name, arguments, result in
-            self?.guardian.observe(tool: name, arguments: arguments, result: result)
+            guard let self else { return }
+            self.guardian.observe(tool: name, arguments: arguments, result: result)
+            // Its edits show in the conversation, quietly, so a reply can be read against them.
+            if case .success = result, GuardianActivity.isEdit(name) {
+                let ink = name == "highlight_text" ? HighlightColor(rawValue: (arguments["color"] as? String ?? "").lowercased()) : nil
+                let text = ink == nil ? GuardianActivity.describe(name, arguments) : "¶\(arguments["paragraph"] ?? "") “\(arguments["find"] ?? "")”"
+                self.chat.post(ChatMessage(role: .activity, text: text, ink: ink))
+            }
         }
         let server = MCPHTTPServer(handler: handler, port: Self.mcpPort)
         if DebugControl.isEnabled {
@@ -118,9 +142,11 @@ final class AppModel: ObservableObject, NoteLibrary {
         guard url != openURL else { return }
         saveNow()
         let text = (try? store.load(url)) ?? ""
+        let sidecar = NoteSidecar.load(for: url)
         openURL = url
         selection = url
-        editor.load(text: text, title: NoteStore.title(ofEditorText: text, fallback: "Untitled"))
+        chat.replace(with: sidecar.chat)
+        editor.load(text: text, title: NoteStore.title(ofEditorText: text, fallback: "Untitled"), highlights: sidecar.spans(in: text))
         wordCount = editor.wordCount
         caretAddress = editor.caretAddress
         focusEditor()
@@ -135,6 +161,7 @@ final class AppModel: ObservableObject, NoteLibrary {
 
     func delete(_ url: URL) {
         try? store.trash(url)
+        NoteSidecar.trash(for: url)
         if url == openURL { openURL = nil }
         refreshNotes()
         if let first = notes.first { open(first.url) } else { newNote() }
@@ -160,11 +187,74 @@ final class AppModel: ObservableObject, NoteLibrary {
         saveTask?.cancel()
         guard let url = openURL else { return }
         let text = editor.text
-        guard (try? store.load(url)) != text else { return }
-        if let saved = try? store.save(editorText: text, to: url) {
+        if (try? store.load(url)) != text, let saved = try? store.save(editorText: text, to: url) {
+            if saved != url { NoteSidecar.move(from: url, to: saved) }
             openURL = saved
             if selection != saved { selection = saved }
             refreshNotes()
+        }
+        saveSidecar()
+    }
+
+    private func saveSidecar() {
+        sidecarTask?.cancel()
+        guard let url = openURL else { return }
+        let sidecar = NoteSidecar(spans: editor.highlights, in: editor.text, chat: chat.messages)
+        if sidecar != NoteSidecar.load(for: url) { sidecar.save(for: url) }
+    }
+
+    private func scheduleSidecarSave() {
+        sidecarTask?.cancel()
+        sidecarTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard !Task.isCancelled else { return }
+            self?.saveSidecar()
+        }
+    }
+
+    // MARK: Chat
+
+    /// The chat field took or lost focus. Taking it leaves the user's caret as a ghost on the page.
+    func chatFocusChanged(_ focused: Bool) {
+        guard focused != chatFocused else { return }
+        chatFocused = focused
+        if focused { editor.leaveGhost() }
+    }
+
+    func focusChat() {
+        if !showChat { showChat = true }
+        chatFocusRequest += 1
+    }
+
+    /// What the ghost cursor points at, as the guardian will be told.
+    var ghostPointer: (anchor: String, quote: String)? {
+        editor.ghostRange.flatMap { GuardianToolbox.pointer(at: $0, in: editor.text) }
+    }
+
+    func dropGhost() { editor.clearGhost(); objectWillChange.send() }
+
+    func sendChat() {
+        let text = chatDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let pointer = ghostPointer
+        chat.post(ChatMessage(role: .user, text: text, anchor: pointer?.anchor, quote: pointer?.quote))
+        chatDraft = ""
+    }
+
+    /// Dictation goes where the user is writing: the page, or the chat.
+    private func deliverDictation(_ actions: [DictationAction]) {
+        guard chatFocused else {
+            editor.insertDictation(actions)
+            return
+        }
+        for action in actions {
+            switch action {
+            case .text(let chunk):
+                let (edit, _) = DictationComposer.insert(chunk, at: (chatDraft as NSString).length, in: chatDraft)
+                chatDraft = edit.applied(to: chatDraft)
+            case .paragraphBreak:
+                chatDraft = chatDraft.trimmingCharacters(in: .whitespaces) + "\n"
+            }
         }
     }
 
@@ -186,7 +276,7 @@ final class AppModel: ObservableObject, NoteLibrary {
             dictation.stop()
         } else {
             editor.isDictating = true
-            focusEditor()
+            if !chatFocused { focusEditor() }
             dictation.start()
         }
     }

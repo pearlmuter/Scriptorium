@@ -36,6 +36,13 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
     /// Called when new dictated text lands.
     var onFreshText: (() -> Void)?
     var onSelectionChange: (() -> Void)?
+    /// Called when highlights are added or dismissed, for saving.
+    var onHighlightsChange: (() -> Void)?
+    /// Called when the user comes back to the page (the ghost cursor is gone).
+    var onReturnToPage: (() -> Void)?
+
+    /// Highlights an edit has touched; dismissed once the edit lands.
+    private var touchedHighlights: Set<String> = []
 
     private var glowTimer: Timer?
 
@@ -78,6 +85,20 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
         textView.typingAttributes = styler.baseAttributes
         textView.delegate = self
         textView.onFormat = { [weak self] in self?.format($0) }
+        textView.onDismissHighlight = { [weak self] in self?.dismissHighlight($0) }
+        textView.onBecomeFirstResponder = { [weak self] in
+            guard let self else { return }
+            // Coming back to the page: the ghost becomes the caret (or selection) again.
+            if let ghost = self.textView.ghostRange {
+                self.textView.ghostRange = nil
+                if NSMaxRange(ghost) <= self.storage.length { self.textView.setSelectedRange(ghost) }
+            }
+            self.onReturnToPage?()
+        }
+        textView.palette.onPick = { [weak self] color in
+            guard let self else { return }
+            if let color { self.highlightSelection(color) } else { self.clearHighlightsInSelection() }
+        }
         textView.setAccessibilityIdentifier("manuscript")
         storage.delegate = self
 
@@ -92,9 +113,11 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
 
     // MARK: Loading
 
-    func load(text: String, title: String) {
+    func load(text: String, title: String, highlights: [HighlightSpan] = []) {
         noteTitle = title
         textView.guardianRange = nil
+        textView.ghostRange = nil
+        textView.hidePalette()
         storage.beginEditing()
         storage.setAttributedString(NSAttributedString(string: text, attributes: styler.baseAttributes))
         storage.endEditing()
@@ -103,6 +126,8 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
         textView.undoManager?.removeAllActions()
         textView.setSelectedRange(NSRange(location: (text as NSString).length, length: 0))
         textView.scrollToBeginningOfDocument(nil)
+        textView.highlightInfo = [:]
+        for h in highlights { setHighlight(h) }
         revision += 1
     }
 
@@ -119,6 +144,13 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
             let end = max(start, edit.transform(NSMaxRange(g)))
             textView.guardianRange = NSRange(location: start, length: end - start)
         }
+        if let g = textView.ghostRange {
+            let edit = TextEdit(range: NSRange(location: editedRange.location, length: editedRange.length - delta), replacement: String(repeating: " ", count: editedRange.length))
+            let start = edit.transform(g.location)
+            textView.ghostRange = NSRange(location: start, length: max(start, edit.transform(NSMaxRange(g))) - start)
+        }
+        // New text never inherits a neighbour's highlight.
+        if editedRange.length > 0 { textStorage.removeAttribute(.highlight, range: editedRange) }
         // A fence opening or closing restyles everything after it.
         let ns = textStorage.string as NSString
         let lines = ns.lineRange(for: editedRange)
@@ -126,7 +158,18 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
         styler.style(textStorage, lines: touchesFence ? NSRange(location: lines.location, length: ns.length - lines.location) : lines)
     }
 
+    func textView(_ textView: NSTextView, shouldChangeTextIn range: NSRange, replacementString: String?) -> Bool {
+        touchedHighlights.formUnion(highlightIDs(touchedBy: range))
+        return true
+    }
+
     func textDidChange(_ notification: Notification) {
+        if !touchedHighlights.isEmpty {
+            let ids = touchedHighlights
+            touchedHighlights = []
+            removeHighlights(ids)
+        }
+        textView.hidePalette()
         revision += 1
         textView.outline = Outline(text: storage.string)
         onTextChange?()
@@ -140,6 +183,8 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
             attrs[.foregroundColor] = Palette.ink
             textView.typingAttributes = attrs
         }
+        if textView.typingAttributes[.highlight] != nil { textView.typingAttributes[.highlight] = nil }
+        textView.updatePalette()
         onSelectionChange?()
     }
 
@@ -284,6 +329,129 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
         }
     }
 
+    // MARK: Ghost cursor
+
+    var ghostRange: NSRange? { textView.ghostRange }
+
+    /// Leaves the user's caret (or selection) drawn on the page while they are in the chat.
+    func leaveGhost() {
+        guard textView.ghostRange == nil else { return }   // already pointing somewhere
+        let sel = textView.selectedRange()
+        textView.ghostRange = sel
+        textView.hidePalette()
+        // The ghost takes over the selection, so the grey inactive selection doesn't hide highlights under it.
+        if sel.length > 0 { textView.setSelectedRange(NSRange(location: NSMaxRange(sel), length: 0)) }
+    }
+
+    func clearGhost() { textView.ghostRange = nil }
+
+    // MARK: Highlights
+
+    var highlights: [HighlightSpan] {
+        var out: [HighlightSpan] = []
+        storage.enumerateAttribute(.highlight, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let id = value as? String, var info = textView.highlightInfo[id] else { return }
+            if let last = out.last, last.id == id, NSMaxRange(last.range) == range.location {
+                out[out.count - 1].range.length += range.length
+            } else {
+                info.range = range
+                out.append(info)
+            }
+        }
+        return out
+    }
+
+    func addHighlight(_ range: NSRange, color: HighlightColor, note: String?, author: Author) {
+        guard range.length > 0, NSMaxRange(range) <= storage.length else { return }
+        setHighlight(HighlightSpan(range: range, color: color, note: note, author: author))
+        onHighlightsChange?()
+    }
+
+    private func setHighlight(_ h: HighlightSpan) {
+        guard h.range.length > 0, NSMaxRange(h.range) <= storage.length else { return }
+        textView.highlightInfo[h.id] = h
+        storage.addAttribute(.highlight, value: h.id, range: h.range)
+        pruneHighlightInfo()
+        textView.needsDisplay = true
+    }
+
+    func removeHighlights(overlapping range: NSRange?) {
+        let ids = range.map { highlightIDs(in: $0) } ?? Set(textView.highlightInfo.keys)
+        removeHighlights(ids)
+    }
+
+    private func removeHighlights(_ ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        var ranges: [NSRange] = []
+        storage.enumerateAttribute(.highlight, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            if let id = value as? String, ids.contains(id) { ranges.append(range) }
+        }
+        for r in ranges { storage.removeAttribute(.highlight, range: r) }
+        for id in ids { textView.highlightInfo[id] = nil }
+        textView.needsDisplay = true
+        onHighlightsChange?()
+    }
+
+    /// A click on a highlight: it fades away. Undo brings it back.
+    func dismissHighlight(_ id: String) {
+        guard let info = textView.highlightInfo[id] else { return }
+        let spans = highlights.filter { $0.id == id }
+        removeHighlights([id])
+        for s in spans { textView.fadeOut(s.range, color: info.color) }
+        let text = storage.string
+        textView.undoManager?.registerUndo(withTarget: self) { editor in
+            guard editor.storage.string == text else { return }
+            for s in spans { editor.setHighlight(s) }
+            editor.onHighlightsChange?()
+        }
+        textView.undoManager?.setActionName("Dismiss Highlight")
+    }
+
+    func highlightSelection(_ color: HighlightColor) {
+        let sel = textView.selectedRange()
+        guard sel.length > 0 else { return }
+        let h = HighlightSpan(range: sel, color: color, note: nil, author: .user)
+        setHighlight(h)
+        textView.undoManager?.registerUndo(withTarget: self) { editor in editor.removeHighlights([h.id]) }
+        textView.undoManager?.setActionName("Highlight")
+        // Collapse to the end, so the new colour is seen rather than the selection.
+        textView.setSelectedRange(NSRange(location: NSMaxRange(sel), length: 0))
+        textView.hidePalette()
+        onHighlightsChange?()
+    }
+
+    func clearHighlightsInSelection() {
+        let sel = textView.selectedRange()
+        let ids = highlightIDs(in: sel.length > 0 ? sel : NSRange(location: max(0, sel.location - 1), length: min(1, storage.length)))
+        removeHighlights(ids)
+        textView.hidePalette()
+    }
+
+    private func highlightIDs(in range: NSRange) -> Set<String> {
+        var ids: Set<String> = []
+        guard range.length > 0, NSMaxRange(range) <= storage.length else { return ids }
+        storage.enumerateAttribute(.highlight, in: range) { value, _, _ in if let id = value as? String { ids.insert(id) } }
+        return ids
+    }
+
+    /// Highlights an edit of `range` would change: any it overlaps, or the one
+    /// an insertion lands inside. Typing at a highlight's edge leaves it be.
+    private func highlightIDs(touchedBy range: NSRange) -> Set<String> {
+        if range.length > 0 { return highlightIDs(in: range) }
+        let l = range.location
+        guard l > 0, l < storage.length,
+              let before = storage.attribute(.highlight, at: l - 1, effectiveRange: nil) as? String,
+              storage.attribute(.highlight, at: l, effectiveRange: nil) as? String == before else { return [] }
+        return [before]
+    }
+
+    /// Forgets highlights whose text has all been deleted.
+    private func pruneHighlightInfo() {
+        var live: Set<String> = []
+        storage.enumerateAttribute(.highlight, in: NSRange(location: 0, length: storage.length)) { v, _, _ in if let id = v as? String { live.insert(id) } }
+        for id in textView.highlightInfo.keys where !live.contains(id) { textView.highlightInfo[id] = nil }
+    }
+
     private func flashGuardian() {
         textView.guardianGlow = 1
         glowTimer?.invalidate()
@@ -301,6 +469,10 @@ final class EditorController: NSObject, @preconcurrency NSTextViewDelegate, @pre
     // MARK: Formatting
 
     func format(_ action: String) {
+        if action.hasPrefix("highlight-") {
+            if let color = HighlightColor(rawValue: String(action.dropFirst("highlight-".count))) { highlightSelection(color) } else { clearHighlightsInSelection() }
+            return
+        }
         let ns = storage.string as NSString
         let selection = textView.selectedRange()
         let inline: [String: String] = ["bold": "**", "italic": "*", "code": "`", "strike": "~~"]

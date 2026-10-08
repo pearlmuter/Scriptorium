@@ -11,13 +11,18 @@ Notes are plain `.md` files in `~/Documents/Transcriptaze`. They export as Markd
 - **Two cursors.** Yours is ink. The guardian's is a lapis bar with a diamond cap, and it washes the text it has just changed.
 - **Wet ink.** Dictated text is drawn lighter until the guardian has read it.
 - **WriteRoom manners.** The format bar fades while you type or speak and returns when you move the mouse. Focus mode (⌃⇧⌘F) hides everything but the page.
+- **Highlights** in three inks: yellow, green and pink. Select text and three swatches appear in the right margin beside it; click one (or ⌥⌘1–3, ⌥⌘0 to remove). A click on a highlight wipes it away (⌘Z brings it back), and any edit inside one dismisses it. The guardian highlights too. Its highlights carry a small lapis diamond and a note you can read on hover. For fact-checking the convention is green = confirmed, yellow = partly true, pink = false. Highlights live beside the note in `.transcriptaze/<note>.json`, never in the Markdown.
 - Markdown formatting: ⌘B ⌘I ⌘K, ⌘1–3 headings, ⌘0 body, plus quote, lists, code and strike from the bar or the Format menu. Return continues a list.
+
+## The chat
+
+Between the notes and the page is a conversation with the guardian (⌃⌘C shows or hides it, ⇧⌘M jumps to it, Esc returns to the page). When you click into it, your caret stays on the page as a **ghost**: a thin bar with a ring, or a dotted underline under a selection. Each message carries what the ghost points at, so "is this right?" needs no explaining. The guardian's edits appear in the conversation as quiet one-line notes. The chat is saved per note, with the highlights.
 
 ## Voice
 
 ⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). The weights are reused from `~/Library/Application Support/Pendragon/Models/Kyutai`. You can also place them in `~/Library/Application Support/Transcriptaze/Models/Kyutai` or set `TRANSCRIPTAZE_STT_DIR`.
 
-"New paragraph" and "new line" act **instantly**: the words never reach the page. Everything else is left to the guardian. *Voice › Dictate from Audio File…* plays a recording through the same pipeline in real time.
+Dictation goes wherever you are writing: the page, or the chat field. "New paragraph" and "new line" act **instantly**: the words never reach the page. Everything else is left to the guardian. *Voice › Dictate from Audio File…* plays a recording through the same pipeline in real time.
 
 ## The guardian
 
@@ -29,9 +34,11 @@ The app serves MCP over Streamable HTTP at `http://127.0.0.1:7337/mcp`, on loopb
 | `replace_text`, `rewrite_sentence`, `delete_text`, `insert_text` | Address by ¶ (and optionally sentence) plus an exact quote, so edits are safe while you keep talking |
 | `split_paragraph`, `merge_paragraphs`, `insert_paragraph`, `delete_paragraph` | Paragraph structure |
 | `format_text` | bold, italic, code, strike, heading1–3, quote, bullet, numbered, plain |
+| `highlight_text`, `clear_highlights` | Yellow, green or pink, with an optional note shown on hover |
+| `reply_in_chat`, `read_chat` | The conversation beside the note. New messages arrive in `wait_for_dictation`, with where the user's ghost cursor points |
 | `move_user_cursor`, `focus` | Move your dictation cursor ("go to the end of paragraph 3"), or the guardian's own |
 | `list_notes`, `read_note` | Other notes, for names and context |
-| `wait_for_dictation`, `finish_review` | The loop for external guardians: block until fresh text arrives, edit, then acknowledge |
+| `wait_for_dictation`, `finish_review` | The loop for external guardians: block until fresh text or a chat message arrives, edit, then acknowledge |
 
 **Connecting a guardian.** Click *Copy for LLM*, in the guardian panel (click "Guardian" in the footer), in Settings, or with ⌥⇧⌘C. It copies one block containing the address, ready-made config for HTTP and stdio clients, and the working loop. The server sends the full guardian instructions on `initialize`. The footer shows whether a guardian is connected and what it last changed.
 
@@ -51,7 +58,7 @@ swift test                            # unit, MCP-over-HTTP, real Kyutai model
 ```
 
 - **Real-model tests** skip when the weights are absent.
-- `Scripts/dev_run.sh` launches with `TRANSCRIPTAZE_DEBUG=1`, which adds `/debug/*` routes (type, dictate a file, snapshot the window). Those routes are what the screenshots were taken with. They are off in normal use.
+- `TRANSCRIPTAZE_NOTES_DIR` points the app at another notes folder (for test runs). `Scripts/dev_run.sh` launches with `TRANSCRIPTAZE_DEBUG=1`, which adds `/debug/*` routes (type, dictate a file, snapshot the window). Those routes are what the screenshots were taken with. They are off in normal use.
 - Rebuild the Rust archive with `Vendor/KyutaiKit` and Pendragon's `Scripts/build_stt.sh`.
 - `swift Scripts/make_icon.swift` regenerates the icon.
 

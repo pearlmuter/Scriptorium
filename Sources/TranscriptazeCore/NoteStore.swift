@@ -18,8 +18,10 @@ public final class NoteStore {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     }
 
+    /// `TRANSCRIPTAZE_NOTES_DIR` overrides it, for test runs.
     public static var defaultFolder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Transcriptaze")
+        if let dir = ProcessInfo.processInfo.environment["TRANSCRIPTAZE_NOTES_DIR"], !dir.isEmpty { return URL(fileURLWithPath: dir) }
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Transcriptaze")
     }
 
     public func list() -> [NoteFile] {

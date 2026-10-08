@@ -13,6 +13,8 @@ final class FakeHost: DocumentHost, NoteLibrary {
     var freshRanges: [(range: NSRange, batch: Int)] { fresh }
     var edits: [String] = []
     var focus: NSRange?
+    var ghostRange: NSRange?
+    var highlights: [HighlightSpan] = []
 
     init(text: String, freshFrom: Int? = nil) {
         self.text = text
@@ -24,12 +26,21 @@ final class FakeHost: DocumentHost, NoteLibrary {
         text = edit.applied(to: text)
         userCursor = edit.transform(userCursor)
         fresh = fresh.map { (NSRange(location: edit.transform($0.range.location), length: max(0, edit.transform(NSMaxRange($0.range)) - edit.transform($0.range.location))), $0.batch) }
+        // As in the editor: an edit inside a highlight dismisses it.
+        highlights.removeAll { NSIntersectionRange($0.range, edit.range).length > 0 || (edit.range.length == 0 && edit.range.location > $0.range.location && edit.range.location < NSMaxRange($0.range)) }
+        highlights = highlights.map { var h = $0; let s = edit.transform(h.range.location); h.range = NSRange(location: s, length: edit.transform(NSMaxRange(h.range)) - s); return h }
         revision += 1
         edits.append(summary)
     }
     func setUserCursor(_ offset: Int) { userCursor = offset }
     func setGuardianFocus(_ range: NSRange?, label: String?) { focus = range }
     func markReviewed(through batch: Int) { fresh.removeAll { $0.batch <= batch } }
+    func addHighlight(_ range: NSRange, color: HighlightColor, note: String?, author: Author) {
+        highlights.append(HighlightSpan(range: range, color: color, note: note, author: author))
+    }
+    func removeHighlights(overlapping range: NSRange?) {
+        highlights.removeAll { h in range.map { NSIntersectionRange(h.range, $0).length > 0 } ?? true }
+    }
     func listNotes() -> [(title: String, modified: Date, preview: String)] { [("Characters", Date(), "Fleur is the heroine.")] }
     func readNote(titled title: String) -> String? { title == "Characters" ? "Fleur is the heroine." : nil }
 }
@@ -133,6 +144,84 @@ final class MCPTests: XCTestCase {
         XCTAssertEqual(host.text, "Bye there.")
     }
 
+    func testChatWakesTheGuardianAndCarriesWhereTheUserPoints() async throws {
+        let text = "The war ended in 1946. Everyone went home."
+        let host = FakeHost(text: text)
+        let chat = ChatLog()
+        let box = GuardianToolbox(host: host, library: host, chat: chat)
+        host.ghostRange = (text as NSString).range(of: "1946")
+        let started = Date()
+        let waiting = Task { try await box.call("wait_for_dictation", arguments: ["timeout_seconds": 20]) }
+        try await Task.sleep(nanoseconds: 300_000_000)
+        let pointer = GuardianToolbox.pointer(at: host.ghostRange!, in: text)!
+        XCTAssertEqual(pointer.anchor, "¶1 [1]")
+        chat.post(ChatMessage(role: .user, text: "Is this right?", anchor: pointer.anchor, quote: pointer.quote))
+        let view = try await waiting.value
+        XCTAssertLessThan(Date().timeIntervalSince(started), 3, "a chat message must end the wait")
+        XCTAssertTrue(view.contains("CHAT — new from the user"), view)
+        XCTAssertTrue(view.contains("[pointing at ¶1 [1] “1946”] Is this right?"), view)
+        XCTAssertTrue(view.contains("ghost cursor on the page is at ¶1 [1] selecting “1946”"), view)
+        XCTAssertTrue(chat.undelivered.isEmpty)
+        // Delivered once only.
+        XCTAssertFalse(box.render(deliver: true).contains("CHAT —"))
+
+        _ = try await box.call("reply_in_chat", arguments: ["text": "No: it ended in 1945."])
+        XCTAssertEqual(chat.messages.last?.role, .guardian)
+        let history = try await box.call("read_chat", arguments: [:])
+        XCTAssertTrue(history.contains("You: No: it ended in 1945."), history)
+    }
+
+    func testGhostCaretQuotesTheWordsAroundIt() {
+        let text = "First paragraph.\nThe flow is gentle and the river is wide."
+        let caret = (text as NSString).range(of: " gentle").location
+        let p = GuardianToolbox.pointer(at: NSRange(location: caret, length: 0), in: text)!
+        XCTAssertEqual(p.anchor, "¶2 [1]")
+        XCTAssertEqual(p.quote, "The flow is‸ gentle and the river is wide.")
+    }
+
+    func testHighlightsForFactChecking() async throws {
+        let text = "The war ended in 1946. Paris is in France."
+        let host = FakeHost(text: text)
+        let box = GuardianToolbox(host: host, library: host)
+        _ = try await box.call("highlight_text", arguments: ["paragraph": 1, "find": "ended in 1946", "color": "pink", "note": "It ended in 1945."])
+        _ = try await box.call("highlight_text", arguments: ["paragraph": 1, "sentence": 2, "find": "Paris is in France", "color": "green"])
+        host.highlights.append(HighlightSpan(range: (text as NSString).range(of: "war"), color: .yellow, note: nil, author: .user))
+        let view = box.render()
+        XCTAssertTrue(view.contains("- ¶1 [1] pink “ended in 1946” (by you) — It ended in 1945."), view)
+        XCTAssertTrue(view.contains("- ¶1 [2] green “Paris is in France” (by you)"), view)
+        XCTAssertTrue(view.contains("- ¶1 [1] yellow “war” (by the user)"), view)
+        do {
+            _ = try await box.call("highlight_text", arguments: ["paragraph": 1, "find": "war", "color": "blue"])
+            XCTFail("only three inks")
+        } catch {}
+
+        // Correcting the fact dismisses its highlight; the others stay.
+        _ = try await box.call("replace_text", arguments: ["paragraph": 1, "find": "1946", "replace": "1945"])
+        XCTAssertEqual(host.highlights.map(\.color), [.green, .yellow])
+        _ = try await box.call("clear_highlights", arguments: ["paragraph": 1, "find": "France"])
+        XCTAssertEqual(host.highlights.map(\.color), [.yellow])
+        _ = try await box.call("clear_highlights", arguments: [:])
+        XCTAssertTrue(host.highlights.isEmpty)
+    }
+
+    func testSidecarReanchorsHighlightsAndKeepsChat() throws {
+        let text = "Alpha beta gamma."
+        let spans = [HighlightSpan(range: NSRange(location: 6, length: 4), color: .pink, note: "n", author: .guardian)]
+        let sidecar = NoteSidecar(spans: spans, in: text, chat: [ChatMessage(role: .user, text: "hi")])
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let note = dir.appendingPathComponent("A.md")
+        sidecar.save(for: note)
+        let loaded = NoteSidecar.load(for: note)
+        XCTAssertEqual(loaded, sidecar)
+        // The file gained words in front: the highlight follows its text.
+        let moved = loaded.spans(in: "Oh. Alpha beta gamma.")
+        XCTAssertEqual(moved.first?.range, NSRange(location: 10, length: 4))
+        XCTAssertTrue(loaded.spans(in: "Nothing here.").isEmpty)
+        NoteSidecar.move(from: note, to: dir.appendingPathComponent("B.md"))
+        XCTAssertEqual(NoteSidecar.load(for: dir.appendingPathComponent("B.md")).chat.first?.text, "hi")
+    }
+
     func testInitializeCarriesGuardianInstructions() async throws {
         let host = FakeHost(text: "")
         let handler = MCPHandler(toolbox: GuardianToolbox(host: host, library: host))
@@ -142,6 +231,9 @@ final class MCPTests: XCTestCase {
         XCTAssertTrue(instructions.contains("wait_for_dictation"))
         XCTAssertTrue(instructions.contains("finish_review"))
         XCTAssertTrue(instructions.contains("outside this app"))
+        XCTAssertTrue(instructions.contains("reply_in_chat"))
+        XCTAssertTrue(instructions.contains("ghost cursor"))
+        XCTAssertTrue(instructions.contains("pink = false"))
     }
 }
 

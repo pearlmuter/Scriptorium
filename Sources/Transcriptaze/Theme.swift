@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TranscriptazeCore
 
 /// Paper, ink, and two pigments from the manuscript tradition: vermilion for
 /// rubrics (the verse numbers) and lapis for the guardian's hand.
@@ -13,6 +14,7 @@ enum Palette {
 
     static let paper = dynamic(light: hex(0xFAF7F0), dark: hex(0x1A1917))
     static let sidebar = dynamic(light: hex(0xF2EEE5), dark: hex(0x201F1C))
+    static let chat = dynamic(light: hex(0xF6F3EB), dark: hex(0x1D1C1A))
     static let ink = dynamic(light: hex(0x22201C), dark: hex(0xE6E1D6))
     /// Dictated text not yet read by the guardian: ink still drying.
     static let wetInk = dynamic(light: hex(0x22201C, 0.52), dark: hex(0xE6E1D6, 0.5))
@@ -23,6 +25,23 @@ enum Palette {
     static let lapisWash = dynamic(light: hex(0x2E4F9E, 0.10), dark: hex(0x7C9BE8, 0.16))
     static let selection = dynamic(light: hex(0xE9DFC9), dark: hex(0x3A362F))
     static let codeWash = dynamic(light: hex(0x22201C, 0.045), dark: hex(0xE6E1D6, 0.07))
+
+    /// Highlighter inks: translucent, so the type reads through them.
+    static func highlighter(_ color: HighlightColor) -> NSColor {
+        switch color {
+        case .yellow: return dynamic(light: hex(0xF4CF3A, 0.42), dark: hex(0xE8C547, 0.30))
+        case .green: return dynamic(light: hex(0x7CC97A, 0.40), dark: hex(0x6FBF6D, 0.30))
+        case .pink: return dynamic(light: hex(0xF28BB5, 0.40), dark: hex(0xE57AA6, 0.32))
+        }
+    }
+    /// The same inks, solid, for the swatches that pick them.
+    static func swatch(_ color: HighlightColor) -> NSColor {
+        switch color {
+        case .yellow: return hex(0xF0C832)
+        case .green: return hex(0x6CC06A)
+        case .pink: return hex(0xEE7FAE)
+        }
+    }
 }
 
 extension Color {

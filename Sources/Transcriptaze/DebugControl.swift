@@ -39,6 +39,34 @@ enum DebugControl {
             let pos = Int(query["at"] ?? "") ?? (model.editor.text as NSString).length
             model.editor.setUserCursor(pos)
             return "ok"
+        case "/debug/chat":
+            // Writes and sends a chat message as the user would (focus=1 only focuses the field).
+            model.focusChat()
+            if let text = query["text"] { model.chatDraft = text }
+            if query["send"] == "1" { model.sendChat() }
+            return "ok"
+        case "/debug/chatshow":
+            model.showChat = query["show"] != "0"; return "ok"
+        case "/debug/page":
+            model.focusEditor(); return "ok"
+        case "/debug/highlight":
+            let ns = model.editor.text as NSString
+            let r = ns.range(of: query["text"] ?? "")
+            guard r.location != NSNotFound, let color = HighlightColor(rawValue: query["color"] ?? "yellow") else { return "not found" }
+            model.focusEditor()
+            model.editor.textView.setSelectedRange(r)
+            model.editor.highlightSelection(color)
+            return "ok"
+        case "/debug/clickhighlight":
+            let ns = model.editor.text as NSString
+            let r = ns.range(of: query["text"] ?? "")
+            guard r.location != NSNotFound, let id = model.editor.textView.textStorage?.attribute(.highlight, at: r.location, effectiveRange: nil) as? String else { return "no highlight" }
+            model.editor.dismissHighlight(id)
+            return "ok"
+        case "/debug/highlights":
+            return model.editor.highlights.map { "\($0.color.rawValue) \($0.author.rawValue) \((model.editor.text as NSString).substring(with: $0.range))" }.joined(separator: "\n")
+        case "/debug/chatlog":
+            return model.chat.messages.map { "\($0.role.rawValue)\($0.delivered ? "✓" : "") \($0.anchor ?? "") \($0.text)" }.joined(separator: "\n")
         case "/debug/new":
             model.newNote(); return "ok"
         case "/debug/chrome":
@@ -55,6 +83,9 @@ enum DebugControl {
             model.copyConnectionCard(); return "ok"
         case "/debug/state":
             return "dictation=\(model.dictation.state) guardian=\(model.guardian.status) words=\(model.wordCount)\n---\n\(model.editor.text)"
+        case "/debug/geometry":
+            let tv = model.editor.textView, sv = model.editor.scrollView
+            return "scroll \(sv.frame) content \(sv.contentSize) clip \(sv.contentView.bounds)\ntext \(tv.frame) inset \(tv.textContainerInset) container \(tv.textContainer?.containerSize ?? .zero)"
         case "/debug/log":
             return model.guardian.log.map { "\($0.isError ? "✗" : "✓") \($0.text)" }.joined(separator: "\n")
         case "/debug/appearance":

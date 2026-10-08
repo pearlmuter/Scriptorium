@@ -23,9 +23,10 @@ public enum ConnectionCard {
             "transcriptaze": { "command": "\(bridgePath)" }
 
         Once connected, loop:
-        1. wait_for_dictation — returns the note numbered ¶paragraph [sentence]; • marks freshly dictated text.
-        2. Carry out spoken commands (e.g. "go to paragraph 2, sentence 2 and change flow for fleur"), then delete the command words. Fix clearly misheard words and punctuation. Never rephrase the author.
-        3. finish_review with the review_token. Repeat.
+        1. wait_for_dictation — returns the note numbered ¶paragraph [sentence]; • marks freshly dictated text; new chat messages appear under CHAT.
+        2. Carry out spoken commands (e.g. "go to paragraph 2, sentence 2 and change flow for fleur"), then delete the command words. Fix clearly misheard words and punctuation. Never rephrase the author unasked.
+        3. Answer chat messages with reply_in_chat. Highlight with highlight_text (green = confirmed, yellow = partly true, pink = false).
+        4. finish_review with the review_token. Repeat.
         Full instructions arrive with the server's initialize response.
         """
     }

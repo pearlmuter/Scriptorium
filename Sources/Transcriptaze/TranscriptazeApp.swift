@@ -41,6 +41,11 @@ struct TranscriptazeApp: App {
                 Button("Quote") { model.editor.format("quote") }
                 Button("Bulleted List") { model.editor.format("bullet") }
                 Button("Numbered List") { model.editor.format("numbered") }
+                Divider()
+                Button("Highlight Yellow") { model.editor.format("highlight-yellow") }.keyboardShortcut("1", modifiers: [.command, .option])
+                Button("Highlight Green") { model.editor.format("highlight-green") }.keyboardShortcut("2", modifiers: [.command, .option])
+                Button("Highlight Pink") { model.editor.format("highlight-pink") }.keyboardShortcut("3", modifiers: [.command, .option])
+                Button("Remove Highlights") { model.editor.format("highlight-clear") }.keyboardShortcut("0", modifiers: [.command, .option])
             }
             CommandMenu("Voice") {
                 Button("Start / Stop Dictation") { model.toggleDictation() }.keyboardShortcut("d", modifiers: [.command, .shift])
@@ -50,10 +55,14 @@ struct TranscriptazeApp: App {
                     if model.guardianAllowed { model.disconnectGuardian() } else { model.allowGuardian() }
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
+                Button("Talk to Guardian") { model.focusChat() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
                 Button("Copy MCP Connection for LLM") { model.copyConnectionCard() }
                     .keyboardShortcut("c", modifiers: [.command, .option, .shift])
             }
             CommandGroup(after: .sidebar) {
+                Button(model.showChat ? "Hide Chat" : "Show Chat") { withAnimation(.easeInOut(duration: 0.25)) { model.showChat.toggle() } }
+                    .keyboardShortcut("c", modifiers: [.command, .control])
                 Button(model.focusMode ? "Leave Focus Mode" : "Focus Mode") { model.focusMode.toggle() }
                     .keyboardShortcut("f", modifiers: [.command, .control, .shift])
                 Button(model.typesetting.showNumbers ? "Hide Numbering" : "Show Numbering") { model.typesetting.showNumbers.toggle() }

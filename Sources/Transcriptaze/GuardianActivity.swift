@@ -54,10 +54,10 @@ final class GuardianActivity: ObservableObject {
             switch name {
             case "wait_for_dictation", "read_document":
                 // A document with unreviewed sentences in it means work has begun.
-                if text.contains("•") { setStatus(.working) } else if status == .absent { setStatus(.connected) }
+                if text.contains("•") || text.contains("CHAT —") { setStatus(.working) } else if status == .absent { setStatus(.connected) }
             case "finish_review":
                 setStatus(.connected)
-            case "list_notes", "read_note", "focus":
+            case "list_notes", "read_note", "focus", "read_chat", "reply_in_chat":
                 if status == .absent { setStatus(.connected) }
             default:
                 setStatus(.working)
@@ -95,6 +95,11 @@ final class GuardianActivity: ObservableObject {
         if log.count > 200 { log.removeFirst(log.count - 200) }
     }
 
+    /// Tools that change the note (or its highlights).
+    static func isEdit(_ name: String) -> Bool {
+        !["wait_for_dictation", "read_document", "finish_review", "list_notes", "read_note", "focus", "read_chat", "reply_in_chat"].contains(name)
+    }
+
     static func describe(_ name: String, _ a: [String: Any]) -> String {
         let p = a["paragraph"].map { "¶\($0) " } ?? ""
         switch name {
@@ -105,6 +110,8 @@ final class GuardianActivity: ObservableObject {
         case "format_text": return "\(p)\(a["style"] ?? "")"
         case "rewrite_sentence": return "\(p)rewrote sentence \(a["sentence"] ?? "")"
         case "move_user_cursor": return "moved your cursor to \(p)"
+        case "highlight_text": return "\(p)highlighted “\(a["find"] ?? "")” \(a["color"] ?? "")"
+        case "clear_highlights": return "\(p)cleared highlights"
         default: return "\(name.replacingOccurrences(of: "_", with: " ")) \(p)"
         }
     }

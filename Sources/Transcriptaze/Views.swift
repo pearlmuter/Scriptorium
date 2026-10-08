@@ -5,20 +5,57 @@ import TranscriptazeCore
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @State private var columns: NavigationSplitViewVisibility = .all
+    @AppStorage("chatWidth") private var chatWidth: Double = 320
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
             Sidebar()
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
         } detail: {
-            EditorPane()
-                .toolbar(model.focusMode ? .hidden : .visible, for: .windowToolbar)
-                .toolbarBackground(.hidden, for: .windowToolbar)
+            HStack(spacing: 0) {
+                if model.showChat && !model.focusMode {
+                    ChatPanel(chat: model.chat, guardian: model.guardian, dictation: model.dictation)
+                        .frame(width: chatWidth)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    ChatDivider(width: $chatWidth)
+                }
+                EditorPane()
+            }
+            .toolbar(model.focusMode ? .hidden : .visible, for: .windowToolbar)
+            .toolbarBackground(.hidden, for: .windowToolbar)
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Button { withAnimation(.easeInOut(duration: 0.25)) { model.showChat.toggle() } } label: {
+                        Image(systemName: model.showChat ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.and.text.bubble.right")
+                    }
+                    .help(model.showChat ? "Hide Chat (⌃⌘C)" : "Show Chat (⌃⌘C)")
+                }
+            }
         }
         .onChange(of: model.focusMode) { _, focus in
             withAnimation(.easeInOut(duration: 0.35)) { columns = focus ? .detailOnly : .all }
         }
         .background(Color(Palette.paper))
+    }
+}
+
+/// A hairline that can be dragged to size the chat.
+struct ChatDivider: View {
+    @Binding var width: Double
+    @State private var start: Double?
+
+    var body: some View {
+        Rectangle()
+            .fill(Color(Palette.faintInk).opacity(0.35))
+            .frame(width: 0.5)
+            .overlay(Color.clear.frame(width: 8).contentShape(Rectangle())
+                .onHover { inside in if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() } }
+                .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { g in
+                        if start == nil { start = width }
+                        width = min(520, max(240, (start ?? width) + g.translation.width))
+                    }
+                    .onEnded { _ in start = nil }))
     }
 }
 

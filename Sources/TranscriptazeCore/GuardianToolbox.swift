@@ -19,6 +19,13 @@ public protocol DocumentHost: AnyObject {
     func setGuardianFocus(_ range: NSRange?, label: String?)
     /// Marks dictation up to and including `batch` as reviewed.
     func markReviewed(through batch: Int)
+    /// Where the user's caret (or selection) was when they went to the chat;
+    /// nil while they are writing on the page.
+    var ghostRange: NSRange? { get }
+    var highlights: [HighlightSpan] { get }
+    func addHighlight(_ range: NSRange, color: HighlightColor, note: String?, author: Author)
+    /// Removes every highlight overlapping `range`, or all of them when nil.
+    func removeHighlights(overlapping range: NSRange?)
 }
 
 /// Other notes, for context.
@@ -39,6 +46,8 @@ public struct ToolSpec {
 public final class GuardianToolbox {
     public weak var host: DocumentHost?
     public weak var library: NoteLibrary?
+    /// The conversation with the user about this note.
+    public weak var chat: ChatLog?
 
     /// False when the user has disconnected the guardian: every tool is refused,
     /// and a waiting wait_for_dictation returns at once, so the LLM's loop ends.
@@ -46,9 +55,10 @@ public final class GuardianToolbox {
 
     public static let disconnectedMessage = "The user has disconnected the guardian. Stop your loop now and make no further calls to this server. Tell the user you have stopped; they can reconnect you from Transcriptaze when they want you back."
 
-    public init(host: DocumentHost? = nil, library: NoteLibrary? = nil) {
+    public init(host: DocumentHost? = nil, library: NoteLibrary? = nil, chat: ChatLog? = nil) {
         self.host = host
         self.library = library
+        self.chat = chat
     }
 
     // MARK: Catalogue
@@ -104,8 +114,20 @@ public final class GuardianToolbox {
         ToolSpec(name: "read_note",
                  description: "Read another note in full, by title.",
                  inputSchema: schema(["title": str("Title as given by list_notes.")], required: ["title"])),
+        ToolSpec(name: "highlight_text",
+                 description: "Highlight an exact quote in yellow, green or pink, with an optional note the user sees on hover. Default meaning (unless the user says otherwise): green = confirmed, yellow = partly true or uncertain, pink = false. Use for fact checking and for pointing things out. Any edit inside a highlight removes it.",
+                 inputSchema: schema(["paragraph": p, "sentence": s, "find": str("Exact text to highlight."), "color": ["type": "string", "enum": HighlightColor.allCases.map(\.rawValue)], "note": str("Short explanation shown on hover, e.g. the correct fact and its source."), "occurrence": occ], required: ["paragraph", "find", "color"])),
+        ToolSpec(name: "clear_highlights",
+                 description: "Remove highlights: those overlapping a quote, those in a paragraph, or (with no paragraph) all of them.",
+                 inputSchema: schema(["paragraph": p, "sentence": s, "find": str("Optional: only highlights overlapping this exact text."), "occurrence": occ])),
+        ToolSpec(name: "reply_in_chat",
+                 description: "Answer the user in the chat panel beside the note. Use when they wrote to you in the chat (shown under CHAT in read_document / wait_for_dictation). Keep it short; the user is writing. You can also make the edits they ask for there.",
+                 inputSchema: schema(["text": str("Your message. Plain text; refer to places as ¶n or ¶n [s].")], required: ["text"])),
+        ToolSpec(name: "read_chat",
+                 description: "Read the conversation with the user about this note, oldest first.",
+                 inputSchema: schema(["limit": ["type": "integer", "description": "How many recent messages (default 20)."]])),
         ToolSpec(name: "wait_for_dictation",
-                 description: "For external guardians: block until there is freshly dictated text you have not reviewed (or the timeout passes), then return the document as read_document would.",
+                 description: "For external guardians: block until there is freshly dictated text you have not reviewed or a new chat message from the user (or the timeout passes), then return the document as read_document would.",
                  inputSchema: schema(["timeout_seconds": ["type": "number", "description": "At most 50."]])),
         ToolSpec(name: "finish_review",
                  description: "Mark fresh dictation as reviewed, up to the review_token from read_document. Call after you have made your edits.",
@@ -119,6 +141,8 @@ public final class GuardianToolbox {
         if name == "wait_for_dictation" { return try await waitForDictation(args) }
         if name == "list_notes" { return listNotes(args) }
         if name == "read_note" { return try readNote(args) }
+        if name == "reply_in_chat" { return try replyInChat(args) }
+        if name == "read_chat" { return readChat(args) }
         guard let host else { throw OperationError("No note is open.") }
         let text = host.text
 
@@ -140,7 +164,7 @@ public final class GuardianToolbox {
         var paragraphShown: Int?
         switch name {
         case "read_document":
-            return render()
+            return render(deliver: true)
         case "replace_text":
             let (pn, find, rep) = (try int("paragraph"), try string("find"), try string("replace"))
             edit = try TextOperations.replace(find, with: rep, paragraph: pn, sentence: optInt("sentence"), occurrence: optInt("occurrence"), in: text)
@@ -190,6 +214,28 @@ public final class GuardianToolbox {
             host.setGuardianFocus(range, label: "¶\(pn)")
             _ = block
             return "Looking at ¶\(pn)."
+        case "highlight_text":
+            let pn = try int("paragraph")
+            guard let color = HighlightColor(rawValue: (try string("color")).lowercased()) else { throw OperationError("color must be yellow, green or pink.") }
+            let range = try TextOperations.locate(try string("find"), paragraph: pn, sentence: optInt("sentence"), occurrence: optInt("occurrence"), in: text)
+            let note = optString("note").flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            host.addHighlight(range, color: color, note: note, author: .guardian)
+            return "Highlighted “\((text as NSString).substring(with: range))” in ¶\(pn) \(color.rawValue)."
+        case "clear_highlights":
+            guard let pn = optInt("paragraph") else {
+                let n = host.highlights.count
+                host.removeHighlights(overlapping: nil)
+                return "Cleared \(n) highlight\(n == 1 ? "" : "s")."
+            }
+            let range: NSRange
+            if let find = optString("find"), !find.isEmpty {
+                range = try TextOperations.locate(find, paragraph: pn, sentence: optInt("sentence"), occurrence: optInt("occurrence"), in: text)
+            } else {
+                range = try TextOperations.scope(paragraph: pn, sentence: optInt("sentence"), in: Outline(text: text)).range
+            }
+            let n = host.highlights.filter { NSIntersectionRange($0.range, range).length > 0 }.count
+            host.removeHighlights(overlapping: range)
+            return "Cleared \(n) highlight\(n == 1 ? "" : "s") in ¶\(pn)."
         case "finish_review":
             host.markReviewed(through: try int("review_token"))
             host.setGuardianFocus(nil, label: nil)
@@ -209,7 +255,8 @@ public final class GuardianToolbox {
     // MARK: Reading
 
     /// The numbered view the guardian reasons over.
-    public func render() -> String {
+    /// With `deliver`, new chat messages are included and marked as read.
+    public func render(deliver: Bool = false) -> String {
         guard let host else { return "No note is open." }
         let text = host.text
         let outline = Outline(text: text)
@@ -240,7 +287,56 @@ public final class GuardianToolbox {
             }
         }
         if outline.paragraphs.isEmpty { lines.append("(empty note)") }
+
+        if let ghost = host.ghostRange, let pointer = Self.pointer(at: ghost, in: text) {
+            lines.append("")
+            lines.append("The user is in the chat; their ghost cursor on the page is at \(pointer.anchor) \(ghost.length > 0 ? "selecting" : "at") “\(pointer.quote)”. \"This\", \"here\" and \"it\" in their messages usually mean that place.")
+        }
+
+        let highlights = host.highlights.sorted { $0.range.location < $1.range.location }
+        if !highlights.isEmpty {
+            lines.append("")
+            lines.append("Highlights (default meaning: green = confirmed, yellow = partly true / uncertain, pink = false):")
+            for h in highlights where NSMaxRange(h.range) <= ns.length {
+                let at = outline.address(of: h.range.location).map { "¶\($0.paragraph)\($0.sentence.map { " [\($0)]" } ?? "")" } ?? "?"
+                let by = h.author == .user ? "by the user" : "by you"
+                lines.append("- \(at) \(h.color.rawValue) “\(ns.substring(with: h.range))” (\(by))\(h.note.map { " — \($0)" } ?? "")")
+            }
+        }
+
+        if deliver, let chat {
+            let fresh = chat.deliver()
+            if !fresh.isEmpty {
+                lines.append("")
+                lines.append("CHAT — new from the user. Answer with reply_in_chat (and make any edits they ask for):")
+                for m in fresh {
+                    let pointing = m.anchor.map { a in " [pointing at \(a)\(m.quote.map { " “\($0)”" } ?? "")]" } ?? ""
+                    lines.append("-\(pointing) \(m.text)")
+                }
+            }
+        }
         return lines.joined(separator: "\n")
+    }
+
+    /// Where a caret or selection is, as the guardian addresses it, and the
+    /// words it points at (‸ marks a caret).
+    public static func pointer(at range: NSRange, in text: String) -> (anchor: String, quote: String)? {
+        let ns = text as NSString
+        guard NSMaxRange(range) <= ns.length else { return nil }
+        let outline = Outline(text: text)
+        let anchor = outline.address(of: range.location).map { "¶\($0.paragraph)\($0.sentence.map { " [\($0)]" } ?? "")" } ?? "outside numbered text"
+        if range.length > 0 {
+            let selected = ns.substring(with: range)
+            return (anchor, selected.count > 400 ? String(selected.prefix(400)) + "…" : selected)
+        }
+        let line = ns.lineRange(for: NSRange(location: range.location, length: 0))
+        var lineEnd = NSMaxRange(line)
+        if lineEnd > line.location, ns.character(at: lineEnd - 1) == 0x0A { lineEnd -= 1 }
+        var before = ns.substring(with: NSRange(location: line.location, length: range.location - line.location))
+        var after = ns.substring(with: NSRange(location: range.location, length: max(0, lineEnd - range.location)))
+        if before.count > 48 { before = "…" + String(before.suffix(48).drop { !$0.isWhitespace }.drop { $0.isWhitespace }) }
+        if after.count > 32 { after = String(after.prefix(32).reversed().drop { !$0.isWhitespace }.reversed()).trimmingCharacters(in: .whitespaces) + "…" }
+        return (anchor, before + "‸" + after)
     }
 
     private func renderBlock(_ block: Outline.Block, ns: NSString, fresh: [NSRange]) -> String {
@@ -272,9 +368,30 @@ public final class GuardianToolbox {
         while Date() < deadline {
             guard isConnected else { throw OperationError(Self.disconnectedMessage) }
             if let host, !host.freshRanges.isEmpty { break }
+            if let chat, !chat.undelivered.isEmpty { break }
             try await Task.sleep(nanoseconds: 250_000_000)
         }
-        return render()
+        return render(deliver: true)
+    }
+
+    private func replyInChat(_ args: [String: Any]) throws -> String {
+        guard let text = (args["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { throw OperationError("Missing 'text'.") }
+        guard let chat else { throw OperationError("The chat is not available.") }
+        chat.post(ChatMessage(role: .guardian, text: text))
+        return "Sent."
+    }
+
+    private func readChat(_ args: [String: Any]) -> String {
+        guard let chat else { return "The chat is not available." }
+        let limit = (args["limit"] as? Int) ?? (args["limit"] as? Double).map(Int.init) ?? 20
+        let messages = chat.messages.filter { $0.role != .activity }.suffix(max(1, limit))
+        if messages.isEmpty { return "No messages yet." }
+        _ = chat.deliver()
+        return messages.map { m in
+            let who = m.role == .user ? "User" : "You"
+            let pointing = m.anchor.map { a in " [pointing at \(a)\(m.quote.map { " “\($0)”" } ?? "")]" } ?? ""
+            return "\(who)\(pointing): \(m.text)"
+        }.joined(separator: "\n")
     }
 
     private func listNotes(_ args: [String: Any]) -> String {
