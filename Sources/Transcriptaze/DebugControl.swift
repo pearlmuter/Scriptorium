@@ -42,8 +42,8 @@ enum DebugControl {
         case "/debug/chat":
             // Writes and sends a chat message as the user would (focus=1 only focuses the field).
             model.focusChat()
-            if let text = query["text"] { model.chatDraft = text }
-            if query["send"] == "1" { model.sendChat() }
+            if let text = query["text"] { model.chat.live = text }
+            if query["close"] == "1" { model.closeChatMessage() }
             return "ok"
         case "/debug/keypress":
             // A real key event through the window, as if typed: name=return|optreturn, or text=… to type.

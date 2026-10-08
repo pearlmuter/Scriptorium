@@ -16,7 +16,7 @@ Notes are plain `.md` files in `~/Documents/Transcriptaze`. They export as Markd
 
 ## The chat
 
-Between the notes and the page is a conversation with the guardian (⌃⌘C shows or hides it, ⇧⌘M jumps to it, Esc returns to the page). When you click into it, your caret stays on the page as a **ghost**: a thin bar with a ring, or a dotted underline under a selection. Each message carries what the ghost points at, so "is this right?" needs no explaining. It also works by voice alone: while dictating on the page, say "Guardian, …" and ask; the guardian moves your words into the chat and answers there. In the chat field, end with "send it" and pause. The guardian's edits appear in the conversation as quiet one-line notes. The chat is saved per note, with the highlights.
+Between the notes and the page is a conversation with the guardian (⌃⌘C shows or hides it, ⇧⌘M jumps to it, Esc returns to the page). When you click into it, your caret stays on the page as a **ghost**: a thin bar with a ring, or a dotted underline under a selection. Each message carries what the ghost points at, so "is this right?" needs no explaining. It also works by voice alone: while dictating on the page, say "Guardian, …" and ask; the guardian moves your words into the chat and answers there. The chat has no send button: what you say or type there streams to the guardian as it arrives, like dictation on the page, and its answer closes your words into a message (Return also starts a fresh one). The guardian's edits appear in the conversation as quiet one-line notes. The chat is saved per note, with the highlights.
 
 ## Voice
 

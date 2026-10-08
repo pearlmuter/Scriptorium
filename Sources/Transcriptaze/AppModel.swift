@@ -26,7 +26,6 @@ final class AppModel: ObservableObject, NoteLibrary {
     }
     /// The user is typing (or dictating) in the chat; their caret is a ghost on the page.
     @Published private(set) var chatFocused = false
-    @Published var chatDraft = ""
     /// Bumped to ask the chat field to take focus.
     @Published private(set) var chatFocusRequest = 0
 
@@ -88,14 +87,12 @@ final class AppModel: ObservableObject, NoteLibrary {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard let self, !Task.isCancelled else { return }
                 self.deliverDictation(self.reflex.flush())
-                self.sendIfSpokenSend()
             }
         }
         dictation.onStop = { [weak self] in
             guard let self else { return }
             self.pauseTask?.cancel()
             self.deliverDictation(self.reflex.flush())
-            self.sendIfSpokenSend()
             self.editor.isDictating = false
         }
     }
@@ -235,19 +232,10 @@ final class AppModel: ObservableObject, NoteLibrary {
 
     func dropGhost() { editor.clearGhost(); objectWillChange.send() }
 
-    func sendChat() {
-        let text = chatDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+    /// Return in the chat: what was said becomes a message, and a fresh one begins.
+    func closeChatMessage() {
         let pointer = ghostPointer
-        chat.post(ChatMessage(role: .user, text: text, anchor: pointer?.anchor, quote: pointer?.quote))
-        chatDraft = ""
-    }
-
-    /// "Send it" at the end of a dictated chat message, followed by a pause, sends it.
-    private func sendIfSpokenSend() {
-        guard chatFocused, let stripped = ChatVoice.strippingSend(chatDraft) else { return }
-        chatDraft = stripped
-        sendChat()
+        chat.seal(anchor: pointer?.anchor, quote: pointer?.quote)
     }
 
     /// Dictation goes where the user is writing: the page, or the chat.
@@ -259,10 +247,10 @@ final class AppModel: ObservableObject, NoteLibrary {
         for action in actions {
             switch action {
             case .text(let chunk):
-                let (edit, _) = DictationComposer.insert(chunk, at: (chatDraft as NSString).length, in: chatDraft)
-                chatDraft = edit.applied(to: chatDraft)
+                let (edit, _) = DictationComposer.insert(chunk, at: (chat.live as NSString).length, in: chat.live)
+                chat.live = edit.applied(to: chat.live)
             case .paragraphBreak:
-                chatDraft = chatDraft.trimmingCharacters(in: .whitespaces) + "\n"
+                closeChatMessage()
             }
         }
     }

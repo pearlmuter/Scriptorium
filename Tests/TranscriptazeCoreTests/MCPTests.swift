@@ -160,7 +160,7 @@ final class MCPTests: XCTestCase {
         chat.post(ChatMessage(role: .user, text: "Is this right?", anchor: pointer.anchor, quote: pointer.quote))
         let view = try await waiting.value
         XCTAssertLessThan(Date().timeIntervalSince(started), 3, "a chat message must end the wait")
-        XCTAssertTrue(view.contains("CHAT — new from the user"), view)
+        XCTAssertTrue(view.contains("CHAT — the user is talking to you"), view)
         XCTAssertTrue(view.contains("[pointing at ¶1 [1] “1946”] Is this right?"), view)
         XCTAssertTrue(view.contains("ghost cursor on the page is at ¶1 [1] selecting “1946”"), view)
         XCTAssertTrue(chat.undelivered.isEmpty)
@@ -171,6 +171,35 @@ final class MCPTests: XCTestCase {
         XCTAssertEqual(chat.messages.last?.role, .guardian)
         let history = try await box.call("read_chat", arguments: [:])
         XCTAssertTrue(history.contains("You: No: it ended in 1945."), history)
+    }
+
+    func testLiveChatStreamsWithoutSending() async throws {
+        let host = FakeHost(text: "The war ended in 1946.")
+        let chat = ChatLog()
+        let box = GuardianToolbox(host: host, library: host, chat: chat)
+        ChatLog.settle = 0.3
+        defer { ChatLog.settle = 1.2 }
+        chat.live = "Is this"
+        XCTAssertFalse(chat.hasNews, "words still arriving do not wake the guardian")
+        let waiting = Task { try await box.call("wait_for_dictation", arguments: ["timeout_seconds": 10]) }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        chat.live = "Is this right?"
+        let view = try await waiting.value
+        XCTAssertTrue(view.contains("still open"), view)
+        XCTAssertTrue(view.contains("“Is this right?”"), view)
+        XCTAssertFalse(chat.hasNews, "read once")
+
+        chat.live = "Is this right? And the second sentence"
+        try await Task.sleep(nanoseconds: 400_000_000)
+        let more = try await box.call("wait_for_dictation", arguments: ["timeout_seconds": 2])
+        XCTAssertTrue(more.contains("New since you last looked: “And the second sentence”"), more)
+
+        // The answer closes the open message into the history.
+        _ = try await box.call("reply_in_chat", arguments: ["text": "It ended in 1945."])
+        XCTAssertEqual(chat.live, "")
+        XCTAssertEqual(chat.messages.map(\.role), [.user, .guardian])
+        XCTAssertEqual(chat.messages.first?.text, "Is this right? And the second sentence")
+        XCTAssertEqual(chat.messages.first?.delivered, true)
     }
 
     func testVoiceOnly_SpokenQuestionAndScroll() async throws {

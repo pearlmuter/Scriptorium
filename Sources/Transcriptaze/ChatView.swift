@@ -16,12 +16,7 @@ struct ChatPanel: View {
         VStack(spacing: 0) {
             header
             Rectangle().fill(Color(Palette.faintInk).opacity(0.35)).frame(height: 0.5)
-            if chat.messages.isEmpty {
-                emptyState
-            } else {
-                transcript
-            }
-            composer
+            transcript
         }
         .background(Color(Palette.chat).ignoresSafeArea())
         .onChange(of: fieldFocused) { _, focused in model.chatFocusChanged(focused) }
@@ -78,20 +73,25 @@ struct ChatPanel: View {
     private var transcript: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if chat.messages.isEmpty && chat.live.isEmpty { introduction }
                     ForEach(Array(chat.messages.enumerated()), id: \.element.id) { index, message in
                         MessageRow(message: message, previous: index > 0 ? chat.messages[index - 1] : nil)
                     }
-                    if let receipt { receiptView(receipt) }
-                    Color.clear.frame(height: 6).id("end")
+                    if chat.live.isEmpty, let receipt { receiptView(receipt) }
+                    openMessage
+                        .padding(.top, chat.messages.isEmpty ? 0 : 14)
+                    Color.clear.frame(height: 10).id("end")
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
+                .frame(maxWidth: .infinity, minHeight: 0, alignment: .bottom)
             }
             .defaultScrollAnchor(.bottom)
             .onChange(of: chat.messages.count) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("end", anchor: .bottom) }
             }
+            .onChange(of: chat.live) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
         }
     }
 
@@ -117,13 +117,12 @@ struct ChatPanel: View {
         .padding(.top, 4)
     }
 
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Spacer()
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Talk to the guardian about the text.")
                 .font(.system(size: 14, weight: .medium, design: .serif))
                 .foregroundStyle(Color(Palette.ink))
-            Text("Your caret stays on the page as a ghost while you write here, so “this sentence” means what you were pointing at. Ask it to fact-check, and it will mark claims green, yellow or pink.")
+            Text("There is no send button: speak or type below and the guardian reads along, answering when you have finished a thought. Your caret stays on the page as a ghost, so “this sentence” means what you were pointing at.")
                 .font(.system(size: 12, design: .serif))
                 .foregroundStyle(Color(Palette.secondaryInk))
                 .fixedSize(horizontal: false, vertical: true)
@@ -134,47 +133,67 @@ struct ChatPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
                 CopyConnectionButton()
             }
-            Spacer()
-            Spacer()
         }
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.horizontal, 6)
+        .padding(.bottom, 22)
     }
 
-    // MARK: Composer
+    // MARK: The open message
 
-    private var composer: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// What the user is saying now, already part of the conversation. It grows
+    /// as they speak or type; the guardian's answer closes it.
+    private var openMessage: some View {
+        VStack(alignment: .trailing, spacing: 4) {
             if let pointer = model.ghostPointer {
                 GhostChip(anchor: pointer.anchor, quote: pointer.quote) { model.dropGhost() }
+                    .padding(.leading, 28)
             }
-            HStack(alignment: .bottom, spacing: 6) {
-                TextField(dictation.state == .listening && model.chatFocused ? "Listening…" : "Talk to the guardian…", text: $model.chatDraft, axis: .vertical)
+            HStack(alignment: .bottom, spacing: 4) {
+                TextField(dictation.state == .listening && model.chatFocused ? "Listening…" : "Talk to the guardian…", text: $chat.live, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13.5, design: .serif))
                     .foregroundStyle(Color(Palette.ink))
-                    .lineLimit(1...8)
+                    .lineLimit(1...12)
                     .focused($fieldFocused)
-                    .onSubmit { model.sendChat() }
+                    .onSubmit { model.closeChatMessage() }
                     .onExitCommand { model.focusEditor() }
-                    .padding(.vertical, 3)
                     .accessibilityIdentifier("chat-field")
                 micButton
             }
-            .padding(.leading, 12)
-            .padding(.trailing, 6)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(Palette.paper)))
+            .padding(.leading, 11)
+            .padding(.trailing, 4)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(Color(Palette.selection).opacity(chat.live.isEmpty ? 0 : 0.75))
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(fieldFocused ? Color(Palette.lapis).opacity(0.45) : Color(Palette.faintInk).opacity(0.5), lineWidth: fieldFocused ? 1 : 0.5)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .strokeBorder(Color(fieldFocused ? Palette.lapis : Palette.faintInk).opacity(fieldFocused ? 0.4 : 0.6),
+                                  style: StrokeStyle(lineWidth: 0.8, dash: chat.live.isEmpty ? [3, 3] : []))
             )
             .contentShape(Rectangle())
             .onTapGesture { fieldFocused = true }
+            .padding(.leading, 28)
+            if let note = liveNote {
+                HStack(spacing: 5) {
+                    if note.hasSuffix("thinking") { ThinkingDots() }
+                    Text(note)
+                }
+                .font(.system(size: 10.5, design: .serif))
+                .foregroundStyle(Color(Palette.secondaryInk).opacity(0.8))
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    /// Beneath the open message: whether the guardian is reading along.
+    private var liveNote: String? {
+        guard !chat.live.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        switch guardian.status {
+        case .absent, .disconnected: return "No guardian is reading"
+        default: return chat.liveSeen >= chat.live.count ? (guardian.status == .working ? "Read · thinking" : "Read") : "The guardian reads along"
+        }
     }
 
     private var micButton: some View {

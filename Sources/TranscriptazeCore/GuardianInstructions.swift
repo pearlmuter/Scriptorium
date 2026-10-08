@@ -13,8 +13,10 @@ public enum GuardianInstructions {
     note and a review_token) → make your edits → call finish_review with that review_token → repeat. Keep looping \
     until the user tells you to stop.
 
-    CHAT. Beside the note is a chat panel where the user talks to you about the text. New messages appear under \
-    CHAT in what wait_for_dictation returns. Answer each with reply_in_chat, briefly. While they are in the chat, \
+    CHAT. Beside the note is a chat panel where the user talks to you about the text. It has no send button: their \
+    words stream in as they speak or type, and appear under CHAT in what wait_for_dictation returns, marked \
+    "still open". Answer with reply_in_chat, briefly, once they have finished a thought; if it trails off \
+    unfinished, call finish_review and wait for more. While they are in the chat, \
     a ghost cursor stays on the page where their caret (or selection) was; "this", "here" and "that sentence" mean \
     that place, and each message says what it was pointing at. In the chat they may ask for any edit, including \
     rewording; make it with the editing tools, then say what you did. A request in the chat overrides rule 3 below.

@@ -74,15 +74,54 @@ public struct ChatMessage: Identifiable, Codable, Equatable, Sendable {
 }
 
 /// The conversation about the open note, between the user and the guardian.
+///
+/// There is no send button. What the user is saying (or typing) is the `live`
+/// message: the guardian sees it as it grows, as it sees dictation on the page,
+/// and answers when the thought seems finished. Its answer closes the live
+/// message into the history.
 @MainActor
 public final class ChatLog: ObservableObject {
     @Published public private(set) var messages: [ChatMessage] = []
+    /// The message the user is speaking or typing now.
+    @Published public var live = "" {
+        didSet {
+            guard live != oldValue else { return }
+            liveChangedAt = Date()
+            if live.isEmpty { liveSeen = 0 }
+        }
+    }
+    /// How much of `live` (in characters) the guardian has read.
+    @Published public private(set) var liveSeen = 0
+    public var liveChangedAt = Date.distantPast
     /// Called after any change, for saving.
     public var onChange: (() -> Void)?
+
+    /// How long the live message must rest before it wakes the guardian, so it
+    /// is not woken for every word.
+    public static var settle: TimeInterval = 1.2
 
     public init() {}
 
     public var undelivered: [ChatMessage] { messages.filter { $0.role == .user && !$0.delivered } }
+
+    var liveText: String { live.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Live words the guardian has not read.
+    public var liveIsFresh: Bool { !liveText.isEmpty && live.count > liveSeen }
+    /// Whether there is anything for the guardian: a message, or live words that have come to rest.
+    public var hasNews: Bool {
+        !undelivered.isEmpty || (liveIsFresh && Date().timeIntervalSince(liveChangedAt) >= Self.settle)
+    }
+
+    /// Closes the live message into the history, pointing where the user was pointing.
+    public func seal(anchor: String? = nil, quote: String? = nil) {
+        let text = liveText
+        guard !text.isEmpty else { live = ""; return }
+        var m = ChatMessage(role: .user, text: text, anchor: anchor, quote: quote)
+        m.delivered = liveSeen >= live.count
+        messages.append(m)
+        live = ""
+        onChange?()
+    }
 
     public func replace(with messages: [ChatMessage]) {
         self.messages = messages
@@ -103,8 +142,17 @@ public final class ChatLog: ObservableObject {
         return fresh
     }
 
+    /// Reads the live message: all of it, and the part not read before.
+    public func readLive() -> (text: String, new: String)? {
+        guard !liveText.isEmpty else { return nil }
+        let new = live.count > liveSeen ? String(live.dropFirst(liveSeen)).trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        liveSeen = live.count
+        return (liveText, new)
+    }
+
     public func clear() {
         messages.removeAll()
+        live = ""
         onChange?()
     }
 }

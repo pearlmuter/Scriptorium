@@ -141,24 +141,3 @@ public enum DictationComposer {
     }
 }
 
-/// Spoken sending for the chat: a message dictated into the chat field is sent
-/// when it ends in "send it" (or "send message", "send that", or a lone "send")
-/// and the speaker pauses.
-public enum ChatVoice {
-    static let commands = ["send it", "send message", "send the message", "send that", "send"]
-
-    /// The draft without its closing send command, or nil if it has none.
-    public static func strippingSend(_ draft: String) -> String? {
-        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-        let lower = trimmed.lowercased()
-        for command in commands where lower.hasSuffix(command) {
-            let head = String(trimmed.dropLast(command.count))
-            // A whole word, and (for a bare "send") its own sentence: "Then send" is prose, "…right? Send." is not.
-            if let c = head.last, !(c.isWhitespace || c.isPunctuation) { continue }
-            let rest = head.trimmingCharacters(in: .whitespaces)
-            if command == "send", let last = rest.last, !".?!".contains(last) { continue }
-            return rest.trimmingCharacters(in: CharacterSet(charactersIn: ",;: ")).trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return nil
-    }
-}

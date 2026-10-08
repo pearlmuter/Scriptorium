@@ -320,12 +320,17 @@ public final class GuardianToolbox {
 
         if deliver, let chat {
             let fresh = chat.deliver()
-            if !fresh.isEmpty {
+            let live = chat.readLive()
+            if !fresh.isEmpty || live != nil {
                 lines.append("")
-                lines.append("CHAT — new from the user. Answer with reply_in_chat (and make any edits they ask for):")
+                lines.append("CHAT — the user is talking to you in the chat beside the note. Answer with reply_in_chat (and make any edits they ask for):")
                 for m in fresh {
                     let pointing = m.anchor.map { a in " [pointing at \(a)\(m.quote.map { " “\($0)”" } ?? "")]" } ?? ""
                     lines.append("-\(pointing) \(m.text)")
+                }
+                if let live {
+                    lines.append("- (still open: words stream in as they speak or type, there is no send button. If the thought seems unfinished, don't answer yet: finish_review and wait.) “\(live.text)”")
+                    if !live.new.isEmpty && live.new != live.text { lines.append("  New since you last looked: “\(live.new)”") }
                 }
             }
         }
@@ -382,7 +387,7 @@ public final class GuardianToolbox {
         while Date() < deadline {
             guard isConnected else { throw OperationError(Self.disconnectedMessage) }
             if let host, !host.freshRanges.isEmpty { break }
-            if let chat, !chat.undelivered.isEmpty { break }
+            if let chat, chat.hasNews { break }
             try await Task.sleep(nanoseconds: 250_000_000)
         }
         return render(deliver: true)
@@ -391,6 +396,10 @@ public final class GuardianToolbox {
     private func replyInChat(_ args: [String: Any]) throws -> String {
         guard let text = (args["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { throw OperationError("Missing 'text'.") }
         guard let chat else { throw OperationError("The chat is not available.") }
+        // Answering closes what the user was saying into the history.
+        var pointer: (anchor: String, quote: String)?
+        if let host, let ghost = host.ghostRange { pointer = Self.pointer(at: ghost, in: host.text) }
+        chat.seal(anchor: pointer?.anchor, quote: pointer?.quote)
         if let heard = (args["heard"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty {
             var said = ChatMessage(role: .user, text: heard)
             said.spoken = true
@@ -405,13 +414,16 @@ public final class GuardianToolbox {
         guard let chat else { return "The chat is not available." }
         let limit = (args["limit"] as? Int) ?? (args["limit"] as? Double).map(Int.init) ?? 20
         let messages = chat.messages.filter { $0.role != .activity }.suffix(max(1, limit))
-        if messages.isEmpty { return "No messages yet." }
         _ = chat.deliver()
-        return messages.map { m in
+        let live = chat.readLive()
+        if messages.isEmpty && live == nil { return "No messages yet." }
+        var lines = messages.map { m in
             let who = m.role == .user ? "User" : "You"
             let pointing = m.anchor.map { a in " [pointing at \(a)\(m.quote.map { " “\($0)”" } ?? "")]" } ?? ""
             return "\(who)\(pointing): \(m.text)"
-        }.joined(separator: "\n")
+        }
+        if let live { lines.append("User (still speaking): \(live.text)") }
+        return lines.joined(separator: "\n")
     }
 
     private func listNotes(_ args: [String: Any]) -> String {
