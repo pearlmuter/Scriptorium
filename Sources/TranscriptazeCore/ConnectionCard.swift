@@ -13,14 +13,23 @@ public enum ConnectionCard {
         Streamable HTTP (no auth, localhost only): \(url)
         stdio bridge (for clients that launch servers): \(bridgePath)
 
-        Claude Code:
+        MCP servers are loaded when a session starts, so add it, then start a new session:
+
+        Claude Code (desktop app or CLI), in the project's .mcp.json:
+            { "mcpServers": { "transcriptaze": { "type": "http", "url": "\(url)" } } }
+        or, with the claude CLI installed:
             claude mcp add --transport http transcriptaze \(url)
 
-        mcpServers config (HTTP clients):
-            "transcriptaze": { "type": "http", "url": "\(url)" }
-
-        mcpServers config (stdio clients, e.g. Claude Desktop):
+        Claude Desktop and other stdio clients (mcpServers):
             "transcriptaze": { "command": "\(bridgePath)" }
+
+        Already in a session that can run shell commands? You can be the guardian now,
+        without adding anything: call the tools as JSON-RPC over HTTP, e.g.
+            curl -s \(url) -H 'Content-Type: application/json' \\
+              -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}'
+            curl -s \(url) -H 'Content-Type: application/json' \\
+              -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wait_for_dictation","arguments":{"timeout_seconds":50}}}'
+        (initialize returns the full instructions; tools/list lists every tool.)
 
         Once connected, loop:
         1. wait_for_dictation — returns the note numbered ¶paragraph [sentence]; • marks freshly dictated text; new chat messages appear under CHAT.
