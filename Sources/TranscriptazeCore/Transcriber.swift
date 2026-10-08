@@ -92,22 +92,18 @@ public final class KyutaiTranscriber: SpeechTranscriber {
         guard pdg_stt_reset(handle) == 0 else { throw TranscriptionError.failed("could not reset the transcriber") }
     }
 
-    /// Where the weights may live, in order of preference. Pendragon's copy is
-    /// reused rather than downloading 2.4 GB again.
+    /// Where the weights may live, in order of preference: our own download,
+    /// else Pendragon's copy, rather than fetching 2.4 GB again.
+    /// TRANSCRIPTAZE_STT_DIR, when set, is the only place looked.
     public static var candidateDirectories: [URL] {
-        var dirs: [URL] = []
-        if let env = ProcessInfo.processInfo.environment["TRANSCRIPTAZE_STT_DIR"] {
-            dirs.append(URL(fileURLWithPath: env))
-        }
+        if ProcessInfo.processInfo.environment["TRANSCRIPTAZE_STT_DIR"] != nil { return [KyutaiModel.installDirectory] }
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        dirs.append(support.appendingPathComponent("Transcriptaze/Models/Kyutai"))
-        dirs.append(support.appendingPathComponent("Pendragon/Models/Kyutai"))
-        return dirs
+        return [KyutaiModel.installDirectory, support.appendingPathComponent("Pendragon/Models/Kyutai")]
     }
 
     public static func locateModel(preferred: URL? = nil) throws -> URL {
         let candidates = (preferred.map { [$0] } ?? []) + candidateDirectories
-        for dir in candidates where FileManager.default.fileExists(atPath: dir.appendingPathComponent("model.safetensors").path) {
+        for dir in candidates where KyutaiModel.isInstalled(in: dir) {
             return dir
         }
         throw TranscriptionError.notInstalled(candidates.map(\.path))

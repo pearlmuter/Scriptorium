@@ -20,11 +20,11 @@ Between the notes and the page is a conversation with the guardian (⌃⌘C show
 
 ## Voice
 
-⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). The weights are reused from `~/Library/Application Support/Pendragon/Models/Kyutai`. You can also place them in `~/Library/Application Support/Transcriptaze/Models/Kyutai` or set `TRANSCRIPTAZE_STT_DIR`.
+⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). On first run the Dictate button offers to fetch it (~2.4 GB) from [Kyutai's Hugging Face page](https://huggingface.co/kyutai/stt-1b-en_fr-candle) into `~/Library/Application Support/Transcriptaze/Models/Kyutai`. An existing copy in Pendragon's folder is used instead; `TRANSCRIPTAZE_STT_DIR` points it somewhere else.
 
 Dictation goes wherever you are writing: the page, or the chat field. With the chat open, the Dictate button and the guardian's status sit at its top, clear of the text.
 
-**Reading aloud.** *Voice › Read Aloud* (⌥⌘R) reads from the caret (or the selection) in Kokoro's voice; ⌘. stops. The guardian can do it too (`read_aloud`), so "read me paragraph 3" works by voice. The sentence being heard is washed in lapis, and dictation pauses so the microphone doesn't transcribe the voice. It runs the official `kokoro` package through `Resources/Speech/kokoro_daemon.py`, reusing the Python runtime and weights Pendragon installs (`~/Library/Application Support/Pendragon/kokoro_runtime`, `…/Models/Kokoro`), so it is offline and needs no download. Set `TRANSCRIPTAZE_KOKORO_PYTHON` to use another Python with `pip install kokoro soundfile`. The voice warms up in the background at launch. "New paragraph" and "new line" act **instantly**: the words never reach the page. Everything else is left to the guardian. *Voice › Dictate from Audio File…* plays a recording through the same pipeline in real time.
+**Reading aloud.** *Voice › Read Aloud* (⌥⌘R) reads from the caret (or the selection) in Kokoro's voice; ⌘. stops. The guardian can do it too (`read_aloud`), so "read me paragraph 3" works by voice. The sentence being heard is washed in lapis, and dictation pauses so the microphone doesn't transcribe the voice. Kokoro-82M runs on the Neural Engine through [FluidAudio](https://github.com/FluidInference/FluidAudio)'s CoreML port; the model (~0.3 GB) downloads from Hugging Face on first use into `~/.cache/fluidaudio`. On macOS 27 it runs on the CPU instead, because Core ML's GPU path aborts there (FluidAudio #843, #889).
 
 ## The guardian
 
@@ -57,6 +57,14 @@ Claude Desktop and other stdio clients use the bundled bridge, `Transcriptaze.ap
 ## The manual
 
 *Help › Transcriptaze Manual* (⌘?) opens `Manual.pdf` in its own window. It is typeset from `Resources/Manual/manual.html` by `swift Scripts/make_manual.swift`, which also warns when a page overflows (`--preview <dir>` writes each page as PNG). Rebuild it after changing the app.
+
+## Sharing it
+
+```bash
+bash Scripts/make_dmg.sh               # → build/Transcriptaze.dmg
+```
+
+The DMG holds only the app (Apple Silicon, macOS 15+); both neural models download on first use. It is ad-hoc signed, not notarised, so on another Mac the first open is right-click → Open → Open (or System Settings › Privacy & Security › Open Anyway).
 
 ## Build and test
 

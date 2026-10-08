@@ -15,10 +15,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/Transcriptaze" "$APP/Contents/MacOS/Transcriptaze"
 cp "$BIN/transcriptaze-mcp" "$APP/Contents/MacOS/transcriptaze-mcp"
+# Package resource bundles (FluidAudio's), where SwiftPM's Bundle.module finds them.
+for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 [ -f "$ROOT/Resources/AppIcon.icns" ] && cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/"
-# The reading voice's helper script (Kokoro; runtime and weights reused from Pendragon).
-cp -R "$ROOT/Resources/Speech" "$APP/Contents/Resources/Speech"
 # The manual, typeset by Scripts/make_manual.swift from Resources/Manual/manual.html.
 [ -f "$ROOT/Resources/Manual.pdf" ] && cp "$ROOT/Resources/Manual.pdf" "$APP/Contents/Resources/"
 

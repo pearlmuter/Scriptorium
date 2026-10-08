@@ -44,6 +44,24 @@ enum Palette {
     }
 }
 
+/// Paper (light) by default: the page is meant to look like a page. Night and
+/// System are there for those who want them.
+enum Appearance: String, CaseIterable, Identifiable {
+    case paper, night, system
+    static let key = "appearance"
+    var id: String { rawValue }
+    var label: String { ["paper": "Paper", "night": "Night", "system": "System"][rawValue]! }
+
+    static func apply() {
+        let chosen = Appearance(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .paper
+        switch chosen {
+        case .paper: NSApp.appearance = NSAppearance(named: .aqua)
+        case .night: NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .system: NSApp.appearance = nil
+        }
+    }
+}
+
 extension Color {
     init(_ ns: NSColor) { self.init(nsColor: ns) }
 }

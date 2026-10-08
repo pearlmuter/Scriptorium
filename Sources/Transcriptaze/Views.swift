@@ -250,9 +250,20 @@ struct DictateButton: View {
     var body: some View { micButton }
 
     var micButton: some View {
-        Button { model.toggleDictation() } label: {
+        Button {
+            switch dictation.state {
+            case .missing, .failed: dictation.downloadModel()
+            default: model.toggleDictation()
+            }
+        } label: {
             HStack(spacing: 7) {
                 switch dictation.state {
+                case .missing:
+                    Image(systemName: "arrow.down.circle")
+                    Text("Get the voice model (\(ByteCountFormatter.string(fromByteCount: KyutaiModel.totalBytes, countStyle: .file)))")
+                case .downloading(let fraction):
+                    ProgressView(value: fraction).progressViewStyle(.linear).frame(width: 60)
+                    Text("Downloading voice model \(Int(fraction * 100))%")
                 case .loading:
                     ProgressView().controlSize(.mini)
                     Text("Loading voice model")
@@ -275,7 +286,13 @@ struct DictateButton: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help({ if case .failed(let m) = dictation.state { return m }; return "Dictate (⌘⇧D)" }())
+        .help({
+            switch dictation.state {
+            case .failed(let m): return m + "\nClick to try fetching the model again."
+            case .missing: return "Transcriptaze listens with Kyutai STT, which runs on this Mac. Click to download it from Kyutai’s page on Hugging Face (one time)."
+            default: return "Dictate (⌘⇧D)"
+            }
+        }())
         .accessibilityIdentifier("dictate")
     }
 
@@ -297,7 +314,6 @@ struct ReadingIndicator: View {
                 HStack(spacing: 6) {
                     Image(systemName: "speaker.wave.2.fill")
                     if case .reading(let p) = reader.state { Text("Reading ¶\(p)") }
-                    else if case .loading(let f?) = reader.state { Text("Loading voice \(Int(f * 100))%") }
                     else { Text("Preparing voice") }
                     Image(systemName: "stop.fill").font(.system(size: 8.5))
                 }

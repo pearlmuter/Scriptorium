@@ -11,6 +11,10 @@ let package = Package(
         .executable(name: "Transcriptaze", targets: ["Transcriptaze"]),
         .executable(name: "transcriptaze-mcp", targets: ["transcriptaze-mcp"]),
     ],
+    dependencies: [
+        // Kokoro text-to-speech on the Neural Engine; fetches its CoreML model from Hugging Face on first use.
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.12.4"),
+    ],
     targets: [
         .target(
             name: "CKyutai",
@@ -24,7 +28,7 @@ let package = Package(
             ]
         ),
         .target(name: "TranscriptazeCore", dependencies: ["CKyutai"]),
-        .executableTarget(name: "Transcriptaze", dependencies: ["TranscriptazeCore"]),
+        .executableTarget(name: "Transcriptaze", dependencies: ["TranscriptazeCore", .product(name: "FluidAudio", package: "FluidAudio")]),
         .executableTarget(name: "transcriptaze-mcp"),
         .testTarget(
             name: "TranscriptazeCoreTests",

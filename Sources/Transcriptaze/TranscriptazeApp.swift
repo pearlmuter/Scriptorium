@@ -12,7 +12,7 @@ struct TranscriptazeApp: App {
             ContentView()
                 .environmentObject(model)
                 .frame(minWidth: 640, minHeight: 420)
-                .onAppear { delegate.model = model }
+                .onAppear { delegate.model = model; Appearance.apply() }
         }
         .defaultSize(width: 1180, height: 820)
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))

@@ -9,6 +9,9 @@ import TranscriptazeCore
 final class DictationEngine: ObservableObject {
     enum State: Equatable {
         case loading, ready, listening, failed(String)
+        /// No speech model on this Mac yet: it can be fetched from Kyutai's Hugging Face page.
+        case missing
+        case downloading(Double)
     }
 
     @Published private(set) var state: State = .loading
@@ -44,8 +47,29 @@ final class DictationEngine: ObservableObject {
                     self?.transcriber = stt
                     self?.state = .ready
                 }
+            } catch TranscriptionError.notInstalled {
+                Task { @MainActor in self?.state = .missing }
             } catch {
                 Task { @MainActor in self?.state = .failed(error.localizedDescription) }
+            }
+        }
+    }
+
+    /// First run: fetches Kyutai STT (about 2.4 GB) from Hugging Face, then loads it.
+    func downloadModel() {
+        switch state {
+        case .missing, .failed: break
+        default: return
+        }
+        state = .downloading(0)
+        Task {
+            do {
+                try await KyutaiModel.download { fraction in
+                    Task { @MainActor in if case .downloading = self.state { self.state = .downloading(fraction) } }
+                }
+                load(modelDirectory: nil)
+            } catch {
+                state = .failed("The speech model could not be downloaded: \(error.localizedDescription)")
             }
         }
     }

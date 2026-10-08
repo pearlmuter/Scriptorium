@@ -16,9 +16,15 @@ struct SettingsView: View {
 
 struct TypographySettings: View {
     @EnvironmentObject var model: AppModel
+    @AppStorage(Appearance.key) private var appearance = Appearance.paper.rawValue
 
     var body: some View {
         Form {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(Appearance.allCases) { Text($0.label).tag($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: appearance) { _, _ in Appearance.apply() }
             Picker("Page", selection: $model.typesetting.pageStyle) {
                 ForEach(Typesetting.PageStyle.allCases) { Text($0.label).tag($0) }
             }
