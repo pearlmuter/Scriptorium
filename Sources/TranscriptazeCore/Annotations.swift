@@ -117,7 +117,8 @@ public final class ChatLog: ObservableObject {
         let text = liveText
         guard !text.isEmpty else { live = ""; return }
         var m = ChatMessage(role: .user, text: text, anchor: anchor, quote: quote)
-        m.delivered = liveSeen >= live.count
+        // Read, unless words arrived after the guardian last looked (trailing spaces don't count).
+        m.delivered = String(live.prefix(liveSeen)).trimmingCharacters(in: .whitespacesAndNewlines) == text
         messages.append(m)
         live = ""
         onChange?()

@@ -194,6 +194,7 @@ final class MCPTests: XCTestCase {
         let more = try await box.call("wait_for_dictation", arguments: ["timeout_seconds": 2])
         XCTAssertTrue(more.contains("New since you last looked: “And the second sentence”"), more)
 
+        chat.live += " "   // a trailing space after reading is not news
         // The answer closes the open message into the history.
         _ = try await box.call("reply_in_chat", arguments: ["text": "It ended in 1945."])
         XCTAssertEqual(chat.live, "")
