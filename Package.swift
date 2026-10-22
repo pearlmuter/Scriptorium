@@ -5,11 +5,11 @@ import PackageDescription
 let kyutaiLib = Context.packageDirectory + "/Vendor/KyutaiKit/lib"
 
 let package = Package(
-    name: "Transcriptaze",
+    name: "Scriptorium",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "Transcriptaze", targets: ["Transcriptaze"]),
-        .executable(name: "transcriptaze-mcp", targets: ["transcriptaze-mcp"]),
+        .executable(name: "Scriptorium", targets: ["Scriptorium"]),
+        .executable(name: "scriptorium-mcp", targets: ["scriptorium-mcp"]),
     ],
     dependencies: [
         // Kokoro text-to-speech on the Neural Engine; fetches its CoreML model from Hugging Face on first use.
@@ -27,12 +27,12 @@ let package = Package(
                 .linkedFramework("Foundation"),
             ]
         ),
-        .target(name: "TranscriptazeCore", dependencies: ["CKyutai"]),
-        .executableTarget(name: "Transcriptaze", dependencies: ["TranscriptazeCore", .product(name: "FluidAudio", package: "FluidAudio")]),
-        .executableTarget(name: "transcriptaze-mcp"),
+        .target(name: "ScriptoriumCore", dependencies: ["CKyutai"]),
+        .executableTarget(name: "Scriptorium", dependencies: ["ScriptoriumCore", .product(name: "FluidAudio", package: "FluidAudio")]),
+        .executableTarget(name: "scriptorium-mcp"),
         .testTarget(
-            name: "TranscriptazeCoreTests",
-            dependencies: ["TranscriptazeCore"],
+            name: "ScriptoriumCoreTests",
+            dependencies: ["ScriptoriumCore"],
             resources: [.copy("Fixtures")]
         ),
     ],

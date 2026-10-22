@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Transcriptaze — The Manual</title>
+<title>Scriptorium — The Manual</title>
 <style>
   :root {
     --paper: #FAF7F0;
@@ -235,7 +235,7 @@
 <section class="page cover">
   <div class="top">
     <img class="icon" src="img/icon.png" alt="">
-    <h1>Transcriptaze<span class="verse-deco">1</span></h1>
+    <h1>Scriptorium<span class="verse-deco">1</span></h1>
     <div class="sub">the manual</div>
     <p class="tag">You speak; the page listens.<br>A guardian reads along.</p>
     <div class="rule"></div>
@@ -245,7 +245,7 @@
 
 <!-- ================= 2. Contents & quick start ================= -->
 <section class="page even">
-  <div class="runhead"><span>contents</span><span>transcriptaze</span></div>
+  <div class="runhead"><span>contents</span><span>scriptorium</span></div>
   <h2 style="margin-top:4px;font-size:15px;">Contents</h2>
   <div class="toc">
     <div class="row"><span class="ch">i</span><span class="t">The Page<em>type, numbering, cursors</em></span><span class="pg">3</span></div>
@@ -374,17 +374,17 @@
     <div class="chapter">chapter iii</div>
     <h1>The Guardian</h1>
     <div class="rule"></div>
-    <p class="lede">Transcriptaze runs no language model of its own. The guardian is one you bring — ideally one that already knows your work.</p>
+    <p class="lede">Scriptorium runs no language model of its own. The guardian is one you bring — ideally one that already knows your work.</p>
   </div>
   <p>The app serves the <em>Model Context Protocol</em> on your Mac, at <code>http://127.0.0.1:7337/mcp</code>. It is reachable from this computer only, never from the network. Any MCP-capable assistant can connect and become the guardian of the open note. If that assistant knows your project, your other documents or your conversation with it, it brings all of that to getting names and terms right.</p>
 
   <h2>Connecting</h2>
   <p>Press <span class="keys"><kbd>⌥</kbd><kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd>,</span> or choose <em>Copy for LLM</em> in the chat’s <span class="quiet">···</span> menu, the guardian panel or Settings. This copies one block with the address, ready-made configuration and the working routine. Paste it to your assistant. Then, for example:</p>
   <h3>Claude Code</h3>
-  <p class="flush"><code>claude mcp add --transport http transcriptaze http://127.0.0.1:7337/mcp</code></p>
+  <p class="flush"><code>claude mcp add --transport http scriptorium http://127.0.0.1:7337/mcp</code></p>
   <h3>Claude Desktop and other stdio clients</h3>
-  <p class="flush">Use the bundled bridge, <code>Transcriptaze.app/Contents/MacOS/transcriptaze-mcp</code>, as the server command.</p>
-  <p style="margin-top:6px">Then ask it to <em>“be the guardian of my Transcriptaze note.”</em> The server gives it its full instructions when it connects. From then on it waits for you to speak or write, edits, and waits again.</p>
+  <p class="flush">Use the bundled bridge, <code>Scriptorium.app/Contents/MacOS/scriptorium-mcp</code>, as the server command.</p>
+  <p style="margin-top:6px">Then ask it to <em>“be the guardian of my Scriptorium note.”</em> The server gives it its full instructions when it connects. From then on it waits for you to speak or write, edits, and waits again.</p>
   <div class="folio"></div>
 </section>
 
@@ -539,8 +539,8 @@
     <div class="rule"></div>
   </div>
   <h2 style="margin-top:0">Plain files</h2>
-  <p class="flush">Every note is an ordinary Markdown file in <code>~/Documents/Transcriptaze</code>, saved as you write. The file is named after the note’s first line, and renamed when the first line changes. Any other app, and any guardian, can read it.</p>
-  <p>Highlights and the chat are not written into your Markdown. They live in a small companion file in a hidden <code>.transcriptaze</code> folder beside your notes, and follow the note when it is renamed.</p>
+  <p class="flush">Every note is an ordinary Markdown file in <code>~/Documents/Scriptorium</code>, saved as you write. The file is named after the note’s first line, and renamed when the first line changes. Any other app, and any guardian, can read it.</p>
+  <p>Highlights and the chat are not written into your Markdown. They live in a small companion file in a hidden <code>.scriptorium</code> folder beside your notes, and follow the note when it is renamed.</p>
   <h3>The sidebar</h3>
   <p class="flush"><span class="keys"><kbd>⌘</kbd><kbd>N</kbd></span> starts a new note. Search filters by title and text. Right-click a note to show it in Finder or move it to the Trash.</p>
   <h3>Export</h3>
@@ -596,6 +596,7 @@
         <tr><td>New note</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>N</kbd></span></td></tr>
         <tr><td>Export as Markdown</td><td class="k"><span class="keys"><kbd>⇧</kbd><kbd>⌘</kbd><kbd>E</kbd></span></td></tr>
         <tr><td>Settings</td><td class="k"><span class="keys"><kbd>⌘</kbd><kbd>,</kbd></span></td></tr>
+        <tr><td>Paper or Night</td><td class="k"><span class="keys"><kbd>⌃</kbd><kbd>⌘</kbd><kbd>N</kbd></span></td></tr>
       </table>
     </div>
     <div class="keep">

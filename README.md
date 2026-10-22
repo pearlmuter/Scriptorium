@@ -1,8 +1,8 @@
-# Transcriptaze
+# Scriptorium
 
 A minimalist macOS writing app for dictation. You speak, Kyutai STT streams words onto the page at your cursor, and a **guardian**, any LLM you connect through **MCP**, reads along and edits the note while you keep talking. It fixes misheard words and carries out spoken commands. The app runs no LLM of its own: the guardian should be one that already knows your work.
 
-Notes are plain `.md` files in `~/Documents/Transcriptaze`. They export as Markdown or plain text.
+Notes are plain `.md` files in `~/Documents/Scriptorium`. They export as Markdown or plain text.
 
 ## The page
 
@@ -11,8 +11,9 @@ Notes are plain `.md` files in `~/Documents/Transcriptaze`. They export as Markd
 - **Two cursors.** Yours is ink. The guardian's is a lapis bar with a diamond cap, and it washes the text it has just changed.
 - **Wet ink.** Dictated text is drawn lighter until the guardian has read it.
 - **WriteRoom manners.** The format bar fades while you type or speak and returns when you move the mouse. Focus mode (⌃⇧⌘F) hides everything but the page.
-- **Highlights** in three inks: yellow, green and pink. Select text and three swatches appear in the right margin beside it; click one (or ⌥⌘1–3, ⌥⌘0 to remove). A click on a highlight wipes it away (⌘Z brings it back), and any edit inside one dismisses it. The guardian highlights too. Its highlights carry a small lapis diamond and a note you can read on hover. For fact-checking the convention is green = confirmed, yellow = partly true, pink = false. Highlights live beside the note in `.transcriptaze/<note>.json`, never in the Markdown.
-- Markdown formatting: ⌘B ⌘I ⌘K, ⌘1–3 headings, ⌘0 body, plus quote, lists, code and strike from the bar or the Format menu. Return continues a list.
+- **Highlights** in three inks: yellow, green and pink. Select text and three swatches appear in the right margin beside it; click one (or ⌥⌘1–3, ⌥⌘0 to remove). A click on a highlight wipes it away (⌘Z brings it back), and any edit inside one dismisses it. The guardian highlights too. Its highlights carry a small lapis diamond and a note you can read on hover. For fact-checking the convention is green = confirmed, yellow = partly true, pink = false. Highlights live beside the note in `.scriptorium/<note>.json`, never in the Markdown.
+- **Paper or Night** from the moon in the toolbar (⌃⌘N): Night is the page inverted, light type on the ink colour.
+- Markdown formatting: ⌘B ⌘I ⌘K, ⌘1–3 headings (the `#` marks stay in the file but are not shown; a heading is numbered like a paragraph, so the guardian can edit it), ⌘0 body, plus quote, lists, code and strike from the bar or the Format menu. Return continues a list.
 
 ## The chat
 
@@ -20,7 +21,7 @@ Between the notes and the page is a conversation with the guardian (⌃⌘C show
 
 ## Voice
 
-⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). On first run the Dictate button offers to fetch it (~2.4 GB) from [Kyutai's Hugging Face page](https://huggingface.co/kyutai/stt-1b-en_fr-candle) into `~/Library/Application Support/Transcriptaze/Models/Kyutai`. An existing copy in Pendragon's folder is used instead; `TRANSCRIPTAZE_STT_DIR` points it somewhere else.
+⇧⌘D starts and stops dictation. The model is **Kyutai `stt-1b-en_fr-candle`**, run through Pendragon's Rust bridge (`Vendor/KyutaiKit`, Metal, about 26 ms per 80 ms frame on an M1 Max). On first run the Dictate button offers to fetch it (~2.4 GB) from [Kyutai's Hugging Face page](https://huggingface.co/kyutai/stt-1b-en_fr-candle) into `~/Library/Application Support/Scriptorium/Models/Kyutai`. An existing copy in Pendragon's folder is used instead; `SCRIPTORIUM_STT_DIR` points it somewhere else.
 
 Dictation goes wherever you are writing: the page, or the chat field. With the chat open, the Dictate button and the guardian's status sit at its top, clear of the text.
 
@@ -49,19 +50,19 @@ The app serves MCP over Streamable HTTP at `http://127.0.0.1:7337/mcp`, on loopb
 For example, Claude Code:
 
 ```bash
-claude mcp add --transport http transcriptaze http://127.0.0.1:7337/mcp
+claude mcp add --transport http scriptorium http://127.0.0.1:7337/mcp
 ```
 
-Claude Desktop and other stdio clients use the bundled bridge, `Transcriptaze.app/Contents/MacOS/transcriptaze-mcp`.
+Claude Desktop and other stdio clients use the bundled bridge, `Scriptorium.app/Contents/MacOS/scriptorium-mcp`.
 
 ## The manual
 
-*Help › Transcriptaze Manual* (⌘?) opens `Manual.pdf` in its own window. It is typeset from `Resources/Manual/manual.html` by `swift Scripts/make_manual.swift`, which also warns when a page overflows (`--preview <dir>` writes each page as PNG). Rebuild it after changing the app.
+*Help › Scriptorium Manual* (⌘?) opens `Manual.pdf` in its own window. It is typeset from `Resources/Manual/manual.html` by `swift Scripts/make_manual.swift`, which also warns when a page overflows (`--preview <dir>` writes each page as PNG). Rebuild it after changing the app.
 
 ## Sharing it
 
 ```bash
-bash Scripts/make_dmg.sh               # → build/Transcriptaze.dmg
+bash Scripts/make_dmg.sh               # → build/Scriptorium.dmg
 ```
 
 The DMG holds only the app (Apple Silicon, macOS 15+); both neural models download on first use. It is ad-hoc signed, not notarised, so on another Mac the first open is right-click → Open → Open (or System Settings › Privacy & Security › Open Anyway).
@@ -69,19 +70,19 @@ The DMG holds only the app (Apple Silicon, macOS 15+); both neural models downlo
 ## Build and test
 
 ```bash
-bash Scripts/build_app.sh --open      # release build → build/Transcriptaze.app
+bash Scripts/build_app.sh --open      # release build → build/Scriptorium.app
 swift test                            # unit, MCP-over-HTTP, real Kyutai model
 ```
 
 - **Real-model tests** skip when the weights are absent.
-- `TRANSCRIPTAZE_NOTES_DIR` points the app at another notes folder (for test runs). `Scripts/dev_run.sh` launches with `TRANSCRIPTAZE_DEBUG=1`, which adds `/debug/*` routes (type, dictate a file, snapshot the window). Those routes are what the screenshots were taken with. They are off in normal use.
+- `SCRIPTORIUM_NOTES_DIR` points the app at another notes folder (for test runs). `Scripts/dev_run.sh` launches with `SCRIPTORIUM_DEBUG=1`, which adds `/debug/*` routes (type, dictate a file, snapshot the window). Those routes are what the screenshots were taken with. They are off in normal use.
 - Rebuild the Rust archive with `Vendor/KyutaiKit` and Pendragon's `Scripts/build_stt.sh`.
 - `swift Scripts/make_icon.swift` regenerates the icon.
 
 ## Layout
 
-- `Sources/TranscriptazeCore`: outline (¶/sentence numbering), Markdown conversion, text operations, dictation reflex, guardian toolbox and instructions, MCP server, note store, Kyutai wrapper. No AppKit.
-- `Sources/Transcriptaze`: the SwiftUI and AppKit app: editor (TextKit 1 `NSTextView` drawing the numbers and the guardian's cursor), styler, dictation engine, guardian activity monitor, settings.
-- `Sources/transcriptaze-mcp`: the stdio ⇄ HTTP bridge.
+- `Sources/ScriptoriumCore`: outline (¶/sentence numbering), Markdown conversion, text operations, dictation reflex, guardian toolbox and instructions, MCP server, note store, Kyutai wrapper. No AppKit.
+- `Sources/Scriptorium`: the SwiftUI and AppKit app: editor (TextKit 1 `NSTextView` drawing the numbers and the guardian's cursor), styler, dictation engine, guardian activity monitor, settings.
+- `Sources/scriptorium-mcp`: the stdio ⇄ HTTP bridge.
 
 Transcription by Kyutai: stt-1b-en_fr, weights licensed CC-BY 4.0.

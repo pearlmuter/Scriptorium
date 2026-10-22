@@ -1,20 +1,20 @@
 #!/bin/bash
-# Builds Transcriptaze.app (release) into ./build/.
+# Builds Scriptorium.app (release) into ./build/.
 #   bash Scripts/build_app.sh            # build
 #   bash Scripts/build_app.sh --open     # build and launch
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-swift build -c release --product Transcriptaze
-swift build -c release --product transcriptaze-mcp
+swift build -c release --product Scriptorium
+swift build -c release --product scriptorium-mcp
 BIN="$(swift build -c release --show-bin-path)"
 
-APP="$ROOT/build/Transcriptaze.app"
+APP="$ROOT/build/Scriptorium.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN/Transcriptaze" "$APP/Contents/MacOS/Transcriptaze"
-cp "$BIN/transcriptaze-mcp" "$APP/Contents/MacOS/transcriptaze-mcp"
+cp "$BIN/Scriptorium" "$APP/Contents/MacOS/Scriptorium"
+cp "$BIN/scriptorium-mcp" "$APP/Contents/MacOS/scriptorium-mcp"
 # Package resource bundles (FluidAudio's), where SwiftPM's Bundle.module finds them.
 for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
@@ -23,8 +23,8 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 [ -f "$ROOT/Resources/Manual.pdf" ] && cp "$ROOT/Resources/Manual.pdf" "$APP/Contents/Resources/"
 
 # Ad-hoc signature with a stable identifier, so the microphone permission sticks between builds.
-codesign --force --sign - --identifier com.transcriptaze.app --entitlements "$ROOT/Resources/Transcriptaze.entitlements" "$APP/Contents/MacOS/transcriptaze-mcp"
-codesign --force --sign - --identifier com.transcriptaze.app --entitlements "$ROOT/Resources/Transcriptaze.entitlements" "$APP"
+codesign --force --sign - --identifier com.scriptorium.app --entitlements "$ROOT/Resources/Scriptorium.entitlements" "$APP/Contents/MacOS/scriptorium-mcp"
+codesign --force --sign - --identifier com.scriptorium.app --entitlements "$ROOT/Resources/Scriptorium.entitlements" "$APP"
 echo "Built $APP"
 
 if [ "${1:-}" = "--open" ]; then open "$APP"; fi

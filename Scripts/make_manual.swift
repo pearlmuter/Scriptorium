@@ -66,8 +66,8 @@ final class Typesetter: NSObject, WKNavigationDelegate {
                 document.insert(page, at: document.pageCount)
             }
             document.documentAttributes = [
-                PDFDocumentAttribute.titleAttribute: "Transcriptaze — The Manual",
-                PDFDocumentAttribute.authorAttribute: "Transcriptaze",
+                PDFDocumentAttribute.titleAttribute: "Scriptorium — The Manual",
+                PDFDocumentAttribute.authorAttribute: "Scriptorium",
                 PDFDocumentAttribute.subjectAttribute: "How to write by voice with a guardian",
             ]
             document.write(to: output)
