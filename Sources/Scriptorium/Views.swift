@@ -23,8 +23,9 @@ struct ContentView: View {
                 EditorPane()
             }
             .toolbar(model.focusMode ? .hidden : .visible, for: .windowToolbar)
-            .toolbarBackground(Color(Palette.paper), for: .windowToolbar)
-            .toolbarBackground(.visible, for: .windowToolbar)
+            // The title bar shows the window's own paper colour (set in Appearance.apply): a
+            // SwiftUI toolbar background would sit over the sidebar's buttons and eat their clicks.
+            .toolbarBackground(.hidden, for: .windowToolbar)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
                     Button { withAnimation(.easeInOut(duration: 0.25)) { model.showChat.toggle() } } label: {
@@ -43,7 +44,7 @@ struct ContentView: View {
         .onChange(of: model.focusMode) { _, focus in
             withAnimation(.easeInOut(duration: 0.35)) { columns = focus ? .detailOnly : .all }
         }
-        .background(Color(Palette.paper).ignoresSafeArea())
+        .background(Color(Palette.paper))
     }
 }
 

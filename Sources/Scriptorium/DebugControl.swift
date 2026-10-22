@@ -110,6 +110,19 @@ enum DebugControl {
         case "/debug/appearance":
             NSApp.appearance = query["mode"] == "dark" ? NSAppearance(named: .darkAqua) : query["mode"] == "light" ? NSAppearance(named: .aqua) : nil
             return "ok"
+        case "/debug/hittest":
+            // What a click at (x, y), measured from the window's top-left, would land on.
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 200 }),
+                  let frame = window.contentView?.superview,
+                  let x = Double(query["x"] ?? ""), let y = Double(query["y"] ?? "") else { return "no window" }
+            var view = frame.hitTest(NSPoint(x: x, y: frame.bounds.height - y))
+            if query["click"] == "1", let control = view as? NSControl { control.performClick(nil) }
+            var chain: [String] = []
+            while let v = view, chain.count < 8 { chain.append(String(describing: type(of: v))); view = v.superview }
+            return chain.joined(separator: " < ")
+        case "/debug/fullscreen":
+            NSApp.windows.first(where: { $0.isVisible && $0.frame.height > 200 })?.toggleFullScreen(nil)
+            return "ok"
         case "/debug/size":
             if let w = Double(query["w"] ?? ""), let h = Double(query["h"] ?? ""), let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
                 window.setContentSize(NSSize(width: w, height: h))

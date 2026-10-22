@@ -70,6 +70,7 @@ enum Appearance: String, CaseIterable, Identifiable {
         case .night: NSApp.appearance = NSAppearance(named: .darkAqua)
         case .system: NSApp.appearance = nil
         }
+        for window in NSApp.windows where window.styleMask.contains(.titled) { window.backgroundColor = Palette.paper }
     }
 }
 
