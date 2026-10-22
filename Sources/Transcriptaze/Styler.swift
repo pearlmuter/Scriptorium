@@ -111,7 +111,8 @@ struct Styler {
                 .font: ts.heading(level),
                 .paragraphStyle: paragraphStyle(lineHeight: 1.2, before: ts.size * (level == 1 ? 1.1 : 0.8), after: ts.size * (isBook ? 0.9 : 0.45)),
             ], range: line)
-            storage.addAttribute(.foregroundColor, value: Palette.faintInk, range: prefixRange)
+            // The hashes are markup, not type: kept in the text, never seen.
+            storage.addAttributes([.foregroundColor: NSColor.clear, .font: NSFont.systemFont(ofSize: 0.01)], range: prefixRange)
         case .listItem:
             let indent = (ns.substring(with: prefixRange) as NSString).size(withAttributes: [.font: ts.body]).width
             storage.addAttribute(.paragraphStyle, value: paragraphStyle(after: ts.size * 0.3, headIndent: indent), range: line)

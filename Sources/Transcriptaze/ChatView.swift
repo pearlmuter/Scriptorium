@@ -28,33 +28,28 @@ struct ChatPanel: View {
 
     /// The voice and the guardian, at the top of the chat where they never cover the text.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                GuardianStatusButton(guardian: guardian)
-                Spacer(minLength: 4)
-                Menu {
-                    Button("Copy MCP Connection for LLM") { model.copyConnectionCard() }
-                    Divider()
-                    Button("Clear Conversation", role: .destructive) { chat.clear() }
-                        .disabled(chat.messages.isEmpty)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color(Palette.secondaryInk))
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
+        HStack(spacing: 6) {
+            DictateButton(dictation: dictation)
+            GuardianStatusButton(guardian: guardian)
+            ReadingIndicator(reader: model.reader)
+            Spacer(minLength: 4)
+            Menu {
+                Button("Copy MCP Connection for LLM") { model.copyConnectionCard() }
+                Divider()
+                Button("Clear Conversation", role: .destructive) { chat.clear() }
+                    .disabled(chat.messages.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color(Palette.secondaryInk))
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
             }
-            HStack(spacing: 6) {
-                DictateButton(dictation: dictation)
-                ReadingIndicator(reader: model.reader)
-                Spacer(minLength: 0)
-            }
-            .padding(.leading, -12)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
+        .padding(.leading, -12)
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 8)

@@ -73,6 +73,8 @@ struct TranscriptazeApp: App {
                     .keyboardShortcut("c", modifiers: [.command, .control])
                 Button(model.focusMode ? "Leave Focus Mode" : "Focus Mode") { model.focusMode.toggle() }
                     .keyboardShortcut("f", modifiers: [.command, .control, .shift])
+                Button("Paper or Night") { Appearance.toggle() }
+                    .keyboardShortcut("n", modifiers: [.command, .control])
                 Button(model.typesetting.showNumbers ? "Hide Numbering" : "Show Numbering") { model.typesetting.showNumbers.toggle() }
                     .keyboardShortcut("l", modifiers: [.command, .shift])
             }

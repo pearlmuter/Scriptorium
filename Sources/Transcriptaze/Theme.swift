@@ -12,12 +12,13 @@ enum Palette {
         NSColor(srgbRed: CGFloat((v >> 16) & 0xFF) / 255, green: CGFloat((v >> 8) & 0xFF) / 255, blue: CGFloat(v & 0xFF) / 255, alpha: a)
     }
 
-    static let paper = dynamic(light: hex(0xFAF7F0), dark: hex(0x1A1917))
-    static let sidebar = dynamic(light: hex(0xF2EEE5), dark: hex(0x201F1C))
-    static let chat = dynamic(light: hex(0xF6F3EB), dark: hex(0x1D1C1A))
-    static let ink = dynamic(light: hex(0x22201C), dark: hex(0xE6E1D6))
+    /// Night is the page inverted: the ink becomes the paper and the paper the ink.
+    static let paper = dynamic(light: hex(0xFAF7F0), dark: hex(0x22201C))
+    static let sidebar = dynamic(light: hex(0xF2EEE5), dark: hex(0x2A2824))
+    static let chat = dynamic(light: hex(0xF6F3EB), dark: hex(0x26241F))
+    static let ink = dynamic(light: hex(0x22201C), dark: hex(0xFAF7F0))
     /// Dictated text not yet read by the guardian: ink still drying.
-    static let wetInk = dynamic(light: hex(0x22201C, 0.52), dark: hex(0xE6E1D6, 0.5))
+    static let wetInk = dynamic(light: hex(0x22201C, 0.52), dark: hex(0xFAF7F0, 0.5))
     static let secondaryInk = dynamic(light: hex(0x6E685E), dark: hex(0x9B958A))
     static let faintInk = dynamic(light: hex(0xB4AC9E), dark: hex(0x5C574F))
     static let rubric = dynamic(light: hex(0xB4462C), dark: hex(0xE0785C))
@@ -52,9 +53,19 @@ enum Appearance: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String { ["paper": "Paper", "night": "Night", "system": "System"][rawValue]! }
 
+    static var current: Appearance { Appearance(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .paper }
+
+    /// Whether the page is dark right now, whatever the setting.
+    static var isNight: Bool { NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
+
+    /// Paper ⇄ Night, from the toolbar or ⌃⌘N.
+    static func toggle() {
+        UserDefaults.standard.set((isNight ? Appearance.paper : .night).rawValue, forKey: key)
+        apply()
+    }
+
     static func apply() {
-        let chosen = Appearance(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .paper
-        switch chosen {
+        switch current {
         case .paper: NSApp.appearance = NSAppearance(named: .aqua)
         case .night: NSApp.appearance = NSAppearance(named: .darkAqua)
         case .system: NSApp.appearance = nil
@@ -145,5 +156,5 @@ struct Typesetting: Equatable {
     /// Paragraph numbers, set in the margin.
     var marginNumeral: NSFont { typeface.font(size: size * 0.62).withSmallCaps() }
     /// Sentence numbers, raised like verse numbers.
-    var verseNumeral: NSFont { typeface.font(size: (size * 0.52).rounded(), weight: .medium) }
+    var verseNumeral: NSFont { typeface.font(size: (size * 0.62).rounded(), weight: .medium) }
 }

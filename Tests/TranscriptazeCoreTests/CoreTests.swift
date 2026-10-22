@@ -5,16 +5,17 @@ final class OutlineTests: XCTestCase {
     func testNumbersParagraphsAndSentences() {
         let text = "# Title\nThe flow is calm. It runs south.\n\n- A list item. Two.\n> Quoted."
         let o = Outline(text: text)
-        XCTAssertEqual(o.paragraphs.count, 3)
+        XCTAssertEqual(o.paragraphs.count, 4)
         XCTAssertEqual(o.blocks[0].kind, .heading(level: 1))
-        XCTAssertNil(o.blocks[0].number)
-        let p1 = o.paragraph(1)!
+        XCTAssertEqual(o.blocks[0].number, 1)
+        XCTAssertEqual((text as NSString).substring(with: o.paragraph(1)!.sentences[0].range), "Title")
+        let p1 = o.paragraph(2)!
         XCTAssertEqual(p1.sentences.count, 2)
         let ns = text as NSString
         XCTAssertEqual(ns.substring(with: p1.sentences[1].range), "It runs south.")
-        XCTAssertEqual(o.paragraph(2)!.kind, .listItem)
-        XCTAssertEqual(ns.substring(with: o.paragraph(2)!.sentences[0].range), "A list item.")
-        XCTAssertEqual(o.paragraph(3)!.kind, .quote)
+        XCTAssertEqual(o.paragraph(3)!.kind, .listItem)
+        XCTAssertEqual(ns.substring(with: o.paragraph(3)!.sentences[0].range), "A list item.")
+        XCTAssertEqual(o.paragraph(4)!.kind, .quote)
     }
 
     func testAbbreviationsDoNotSplitSentences() {
@@ -64,23 +65,23 @@ final class TextOperationsTests: XCTestCase {
     let doc = "# Notes\nThe river is wide. The flow is gentle and slow.\nSecond paragraph here."
 
     func testReplaceWithinSentence() throws {
-        let edit = try TextOperations.replace("flow", with: "fleur", paragraph: 1, sentence: 2, in: doc)
+        let edit = try TextOperations.replace("flow", with: "fleur", paragraph: 2, sentence: 2, in: doc)
         XCTAssertEqual(edit.applied(to: doc), "# Notes\nThe river is wide. The fleur is gentle and slow.\nSecond paragraph here.")
     }
 
     func testReplaceFallsBackToParagraphWhenSentenceIsWrong() throws {
-        let edit = try TextOperations.replace("flow", with: "fleur", paragraph: 1, sentence: 1, in: doc)
+        let edit = try TextOperations.replace("flow", with: "fleur", paragraph: 2, sentence: 1, in: doc)
         XCTAssertTrue(edit.applied(to: doc).contains("The fleur is"))
     }
 
     func testAmbiguousQuoteFails() {
-        XCTAssertThrowsError(try TextOperations.replace("The", with: "A", paragraph: 1, sentence: nil, in: doc))
-        XCTAssertNoThrow(try TextOperations.replace("The", with: "A", paragraph: 1, sentence: nil, occurrence: 2, in: doc))
+        XCTAssertThrowsError(try TextOperations.replace("The", with: "A", paragraph: 2, sentence: nil, in: doc))
+        XCTAssertNoThrow(try TextOperations.replace("The", with: "A", paragraph: 2, sentence: nil, occurrence: 2, in: doc))
     }
 
     func testMissingParagraphExplains() {
         XCTAssertThrowsError(try TextOperations.replace("x", with: "y", paragraph: 9, sentence: nil, in: doc)) { error in
-            XCTAssertTrue(error.localizedDescription.contains("2 paragraphs"))
+            XCTAssertTrue(error.localizedDescription.contains("3 paragraphs"))
         }
     }
 
@@ -205,10 +206,11 @@ final class DictationTests: XCTestCase {
 final class NarrationTests: XCTestCase {
     func testPassagesAreSentencesWithoutMarkdown() {
         let text = "# Title\nThe **river** was wide. Yes. It was cold that year.\n- A list item here, long enough to stand alone.\nLast."
-        let p = Narration.passages(from: 1, to: 3, in: text)
+        let p = Narration.passages(from: 2, to: 4, in: text)
         XCTAssertEqual(p.map(\.text), ["The river was wide. Yes. It was cold that year.", "A list item here, long enough to stand alone.", "Last."])
-        XCTAssertEqual(p.map(\.paragraph), [1, 2, 3])
+        XCTAssertEqual(p.map(\.paragraph), [2, 3, 4])
         XCTAssertEqual(p.first?.sentence, 1)
-        XCTAssertEqual(Narration.passages(from: 1, to: 1, sentence: 3, in: text).map(\.text), ["It was cold that year."])
+        XCTAssertEqual(Narration.passages(from: 2, to: 2, sentence: 3, in: text).map(\.text), ["It was cold that year."])
+        XCTAssertEqual(Narration.passages(from: 1, to: 1, in: text).map(\.text), ["Title"])
     }
 }

@@ -314,8 +314,6 @@ public final class GuardianToolbox {
         for block in outline.blocks {
             switch block.kind {
             case .blank: continue
-            case .heading(let level):
-                lines.append("H\(level) " + ns.substring(with: block.range))
             case .code:
                 lines.append("    | " + ns.substring(with: block.range))
             case .rule:

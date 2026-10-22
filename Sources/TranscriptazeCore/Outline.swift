@@ -5,8 +5,8 @@ import NaturalLanguage
 ///
 /// In the editor every line is a paragraph (Return starts a new one), so the
 /// outline is a function of the text alone. All ranges are UTF-16 `NSRange`s,
-/// because that is what `NSTextView` speaks. Headings, code and rules are not
-/// counted; prose, list items and quotes are.
+/// because that is what `NSTextView` speaks. Code and rules are not counted;
+/// prose, headings, list items and quotes are. A heading is one sentence.
 public struct Outline: Equatable {
     public enum Kind: Equatable {
         case prose
@@ -88,6 +88,10 @@ public struct Outline: Equatable {
                 number += 1
                 paragraphNumber = number
                 sentences = Outline.sentences(in: ns, content: content)
+            case .heading:
+                number += 1
+                paragraphNumber = number
+                if let r = Outline.trimmed(content, in: ns) { sentences = [Sentence(number: 1, range: r)] }
             default:
                 break
             }
@@ -123,6 +127,14 @@ public struct Outline: Equatable {
     static let quoteRegex = try! NSRegularExpression(pattern: "^\\s*>[ \\t]?")
 
     private static let cache = SentenceCache()
+
+    /// `range` without surrounding whitespace, or nil if nothing is left.
+    static func trimmed(_ range: NSRange, in ns: NSString) -> NSRange? {
+        var r = range
+        while r.length > 0, ns.character(at: NSMaxRange(r) - 1) == 0x20 || ns.character(at: NSMaxRange(r) - 1) == 0x09 { r.length -= 1 }
+        while r.length > 0, ns.character(at: r.location) == 0x20 || ns.character(at: r.location) == 0x09 { r.location += 1; r.length -= 1 }
+        return r.length > 0 ? r : nil
+    }
 
     /// Sentence ranges within a piece of text, exactly as the outline segments them.
     public static func sentenceRanges(in text: String) -> [NSRange] {

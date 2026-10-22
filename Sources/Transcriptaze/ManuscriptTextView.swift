@@ -50,6 +50,11 @@ final class ManuscriptTextView: NSTextView {
         // Never wider than the page: the column is centred by the inset, not by scrolling sideways.
         var size = newSize
         if let width = enclosingScrollView?.contentSize.width, width > 0 { size.width = width }
+        // Room below the text, so its last line can be scrolled up to any height on the screen.
+        if let viewport = enclosingScrollView?.contentSize.height, let lm = layoutManager, let tc = textContainer {
+            let text = lm.usedRect(for: tc).height + textContainerInset.height * 2
+            size.height = max(viewport, text + max(0, viewport - verticalInset * 2 - typesetting.size * 2))
+        }
         super.setFrameSize(size)
         updateContainer()
     }

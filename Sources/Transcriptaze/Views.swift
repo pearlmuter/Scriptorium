@@ -6,6 +6,7 @@ struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @State private var columns: NavigationSplitViewVisibility = .all
     @AppStorage("chatPanelWidth") private var chatWidth: Double = 420
+    @AppStorage(Appearance.key) private var appearance = Appearance.paper.rawValue
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -22,7 +23,8 @@ struct ContentView: View {
                 EditorPane()
             }
             .toolbar(model.focusMode ? .hidden : .visible, for: .windowToolbar)
-            .toolbarBackground(.hidden, for: .windowToolbar)
+            .toolbarBackground(Color(Palette.paper), for: .windowToolbar)
+            .toolbarBackground(.visible, for: .windowToolbar)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
                     Button { withAnimation(.easeInOut(duration: 0.25)) { model.showChat.toggle() } } label: {
@@ -30,12 +32,18 @@ struct ContentView: View {
                     }
                     .help(model.showChat ? "Hide Chat (⌃⌘C)" : "Show Chat (⌃⌘C)")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { Appearance.toggle(); appearance = Appearance.current.rawValue } label: {
+                        Image(systemName: appearance == Appearance.night.rawValue ? "sun.max" : "moon")
+                    }
+                    .help("Paper or Night (⌃⌘N)")
+                }
             }
         }
         .onChange(of: model.focusMode) { _, focus in
             withAnimation(.easeInOut(duration: 0.35)) { columns = focus ? .detailOnly : .all }
         }
-        .background(Color(Palette.paper))
+        .background(Color(Palette.paper).ignoresSafeArea())
     }
 }
 
@@ -355,15 +363,18 @@ struct GuardianStatusButton: View {
         HStack(spacing: 6) {
             Diamond()
                 .fill(Color(Palette.lapis).opacity(guardian.status == .working ? 1 : guardian.status == .connected ? 0.6 : 0.25))
-                .frame(width: 7, height: 9)
+                .frame(width: 8, height: 11)
                 .scaleEffect(guardian.status == .working ? 1.15 : 1)
                 .animation(guardian.status == .working ? .easeInOut(duration: 0.6).repeatForever() : .default, value: guardian.status)
             Text(guardianText)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .font(.system(size: 11.5, design: .serif))
+        .font(.system(size: 12, weight: .medium))
         .foregroundStyle(Color(Palette.lapis).opacity(0.85))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .contentShape(Capsule())
         .opacity(!recedes || model.chromeVisible || guardian.status == .working ? 1 : 0.55)
     }
 
