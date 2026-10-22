@@ -4,6 +4,15 @@ A minimalist macOS writing app for dictation. You speak, Kyutai STT streams word
 
 Notes are plain `.md` files in `~/Documents/Scriptorium`. They export as Markdown or plain text.
 
+## Install
+
+1. Download **[Scriptorium.dmg](https://github.com/pearlmuter/Scriptorium/releases/latest/download/Scriptorium.dmg)** (Apple Silicon Mac, macOS 15 or later).
+2. Open it and drag Scriptorium into Applications.
+3. Open Scriptorium. It is signed and notarised by Apple, so it opens like any other app.
+4. Click **Dictate** once to fetch the speech model (about 2.4 GB, one time), and allow the microphone when macOS asks. The reading voice (about 0.3 GB) is fetched the first time something is read aloud.
+
+To get a guardian, open the chat's ⋯ menu, choose *Copy MCP Connection for LLM*, and give that text to Claude Code, Claude Desktop or any MCP client.
+
 ## The page
 
 - **Book layout** by default: justified and hyphenated, first-line indents instead of gaps between paragraphs, ~65-character measure, New York serif with old-style figures. *Manuscript* (ragged, spaced) is the alternative.
@@ -59,13 +68,20 @@ Claude Desktop and other stdio clients use the bundled bridge, `Scriptorium.app/
 
 *Help › Scriptorium Manual* (⌘?) opens `Manual.pdf` in its own window. It is typeset from `Resources/Manual/manual.html` by `swift Scripts/make_manual.swift`, which also warns when a page overflows (`--preview <dir>` writes each page as PNG). Rebuild it after changing the app.
 
-## Sharing it
+## Releasing
 
 ```bash
-bash Scripts/make_dmg.sh               # → build/Scriptorium.dmg
+bash Scripts/make_dmg.sh              # → build/Scriptorium.dmg, signed and notarised
+bash Scripts/make_dmg.sh --release    # …and published as the GitHub release v<CFBundleShortVersionString>
 ```
 
-The DMG holds only the app (Apple Silicon, macOS 15+); both neural models download on first use. It is ad-hoc signed, not notarised, so on another Mac the first open is right-click → Open → Open (or System Settings › Privacy & Security › Open Anyway).
+The DMG holds only the app; both neural models download on first use. With a Developer ID certificate in the keychain the app is signed with the hardened runtime and the image is notarised and stapled. Notarising needs a keychain profile, made once:
+
+```bash
+xcrun notarytool store-credentials scriptorium-notary --apple-id <apple-id> --team-id <team-id>
+```
+
+Bump `CFBundleShortVersionString` in `Resources/Info.plist` before each release. Without a certificate the build is ad-hoc signed and `--release` refuses to publish.
 
 ## Build and test
 
@@ -86,3 +102,7 @@ swift test                            # unit, MCP-over-HTTP, real Kyutai model
 - `Sources/scriptorium-mcp`: the stdio ⇄ HTTP bridge.
 
 Transcription by Kyutai: stt-1b-en_fr, weights licensed CC-BY 4.0.
+
+## Licence
+
+Scriptorium is free software under the [GNU General Public License v3.0 or later](LICENSE): you may use, study, share and change it, and anything you distribute that is built from it must be shared under the same terms. The vendored Kyutai bridge (`Vendor/KyutaiKit`) is MIT; FluidAudio is Apache 2.0.

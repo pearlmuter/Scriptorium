@@ -22,9 +22,16 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 # The manual, typeset by Scripts/make_manual.swift from Resources/Manual/manual.html.
 [ -f "$ROOT/Resources/Manual.pdf" ] && cp "$ROOT/Resources/Manual.pdf" "$APP/Contents/Resources/"
 
-# Ad-hoc signature with a stable identifier, so the microphone permission sticks between builds.
-codesign --force --sign - --identifier com.scriptorium.app --entitlements "$ROOT/Resources/Scriptorium.entitlements" "$APP/Contents/MacOS/scriptorium-mcp"
-codesign --force --sign - --identifier com.scriptorium.app --entitlements "$ROOT/Resources/Scriptorium.entitlements" "$APP"
+# Signed with the Developer ID when this Mac has one (hardened runtime, timestamped, so it
+# can be notarised), else ad-hoc. SIGN_IDENTITY overrides; SIGN_IDENTITY=- forces ad-hoc.
+# A stable identifier either way, so the microphone permission sticks between builds.
+IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)}"
+IDENTITY="${IDENTITY:--}"
+SIGN=(codesign --force --sign "$IDENTITY" --entitlements "$ROOT/Resources/Scriptorium.entitlements")
+[ "$IDENTITY" != "-" ] && SIGN+=(--options runtime --timestamp)
+"${SIGN[@]}" --identifier com.scriptorium.mcp "$APP/Contents/MacOS/scriptorium-mcp"
+"${SIGN[@]}" --identifier com.scriptorium.app "$APP"
+echo "Signed as: $IDENTITY"
 echo "Built $APP"
 
 if [ "${1:-}" = "--open" ]; then open "$APP"; fi
